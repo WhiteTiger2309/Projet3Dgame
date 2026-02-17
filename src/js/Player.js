@@ -20,7 +20,7 @@ export class Player {
         this.SPEED = 5;
         this.JUMP_FORCE = 4.5;
         this.GRAVITY = -9.81;
-        this.SENSITIVITY = 0.002;
+        this.SENSITIVITY = 0.0006;
 
         this.isGrounded = false;
 
@@ -60,10 +60,14 @@ export class Player {
         this.player.isVisible = true;
 
         this.player.checkCollisions = true;
-        // this.player.showBoundingBox = true;
-        // les colisions sont faite avec des ellipsoid ! (on ne peut pas changer ?)
+        // a faire enlever les checkCollisions et changer fonction updateFromControls pour utiliser les forces sur le this.playerAggregate.body
 
         this.player.position = new BABYLON.Vector3(0, 2, -10);
+
+        // pour l'instant player Aggregate inutile 
+        // this.playerAggregate = new BABYLON.PhysicsAggregate(this.player, BABYLON.PhysicsShapeType.MESH, { mass: 0, friction: 0.7, restitution: 0.2 }, this.scene);
+        // this.playerAggregate.body.setMotionType(BABYLON.PhysicsMotionType.STATIC);
+        // this.playerAggregate.body.setMotionType(BABYLON.PhysicsMotionType.DYNAMIC);
 
         this.head = new BABYLON.TransformNode("head", this.scene);
         this.head.position.y = 0.8;
@@ -86,7 +90,7 @@ export class Player {
         
         this.camera.parent = this.head;
 
-        // // // temp camera pour debug commenter la ligne au dessus aussi
+        // // temp camera pour debug commenter la ligne au dessus aussi
         // this.camera.attachControl(this.canvas);
         // this.camera.position = new BABYLON.Vector3(-11, 1.8, -9.8)
         // this.camera.setTarget(this.player.position)

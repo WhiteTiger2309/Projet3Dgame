@@ -1,4 +1,5 @@
 import * as BABYLON from '@babylonjs/core'
+import HavokPhysics from "@babylonjs/havok";
 
 import { Player } from './Player.js';
 
@@ -10,24 +11,43 @@ export class Map {
 
     constructor(canvas) {
         this.engine = new BABYLON.Engine(canvas, true);
+        this.canvas = canvas
+
+        this.start()
+    }
+
+
+    async start() {
+        await this.initGame()
+    }
+
+    async initGame() {
+        this.havokInstance = await HavokPhysics();
+        this.havokPlugin = new BABYLON.HavokPlugin(true, this.havokInstance);
+
         this.scene = this.createScene();
+
         this.createLights(this.scene)
         this.createGround(this.scene);
         this.createSimpleRuins(this.scene);
 
+        this.createBox()
+
         this.createPlayer();
-        this.modifySettings(this.scene, canvas);
+        this.modifySettings(this.scene, this.canvas);
 
         this.engine.runRenderLoop(() => this.scene.render());
         window.addEventListener("resize", () => this.engine.resize());
+        
     }
-
 
     createScene() {
         const scene = new BABYLON.Scene(this.engine);
 
+        scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), this.havokPlugin);
+
         // Collisions + gravité (comme tp1_exemple3/4)
-        scene.collisionsEnabled = true;
+        scene.collisionsEnabled = false;
         // scene.gravity = new BABYLON.Vector3(0, -0.1, 0);
 
         // Un petit boost d'ambiance pour ne pas être trop sombre
@@ -36,8 +56,6 @@ export class Map {
         // Un peu d'atmosphère, sans aller au-delà du prototype
         scene.clearColor = new BABYLON.Color4(0.02, 0.04, 0.06, 1);
 
-        // this.camera = this.createFpsCamera(scene);
-
         scene.registerBeforeRender(() => {
             this.beforeRenderUpdate();
         })
@@ -45,7 +63,21 @@ export class Map {
         return scene;
     }
 
-    beforeRenderUpdate(){
+    createBox(){
+        let box = BABYLON.MeshBuilder.CreateBox("box", { width: 1, depth: 1, height: 1 }, this.scene);
+        box.material = new BABYLON.StandardMaterial("boxMat", this.scene);
+        // box.position = new BABYLON.Vector3(-8, 30, 7);
+        box.position = new BABYLON.Vector3(3, 30, -10);
+        box.checkCollisions = true;
+        const boxAggregate = new BABYLON.PhysicsAggregate(box, BABYLON.PhysicsShapeType.BOX, { mass: .25, friction: 0.75, restitution: 0.3 }, this.scene);
+    }
+
+    addStaticPhysics(mesh){
+        const meshAggregate = new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH, { mass: 0, friction: 0.7, restitution: 0.2 }, this.scene);
+        meshAggregate.body.setMotionType(BABYLON.PhysicsMotionType.STATIC);
+    }
+
+    beforeRenderUpdate() {
         this.deltaTime = this.scene.getEngine().getDeltaTime() / 1000.0;
         this.player.beforeRenderUpdate()
     }
@@ -80,6 +112,8 @@ export class Map {
         ground.material = mat;
 
         ground.checkCollisions = true;
+        this.addStaticPhysics(ground)
+
         return ground;
     }
 
@@ -94,6 +128,9 @@ export class Map {
             mesh.position = position.clone();
             mesh.material = ruinMat;
             mesh.checkCollisions = true;
+
+            this.addStaticPhysics(mesh)
+
             return mesh;
         };
 
@@ -106,6 +143,8 @@ export class Map {
         ship.position = new BABYLON.Vector3(0, 1, -18);
         ship.material = ruinMat;
         ship.checkCollisions = true;
+        this.addStaticPhysics(ship)
+
 
         // Arche / pylônes simplifiés
         makeBlock("pillar1", 3, new BABYLON.Vector3(12, 1.5, 8));
@@ -119,6 +158,8 @@ export class Map {
         lintel.position = new BABYLON.Vector3(15, 4, 8);
         lintel.material = ruinMat;
         lintel.checkCollisions = true;
+        this.addStaticPhysics(lintel)
+
 
         // Quelques rochers
         const rockMat = new BABYLON.StandardMaterial("rockMat", scene);
@@ -140,6 +181,9 @@ export class Map {
             rock.scaling.y = 0.6;
             rock.material = rockMat;
             rock.checkCollisions = true;
+
+            this.addStaticPhysics(rock)
+
         });
     }
 
