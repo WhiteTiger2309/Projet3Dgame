@@ -1,8 +1,10 @@
-import { createFPSCamera } from './Camera.js';
+import { Player } from './Player.js';
 
 export class Map {
     scene;
     engine;
+    player;
+    deltaTime;
 
     constructor(canvas) {
         this.engine = new BABYLON.Engine(canvas, true);
@@ -11,12 +13,11 @@ export class Map {
         this.createGround(this.scene);
         this.createSimpleRuins(this.scene);
 
-        this.setUpCamera();
+        this.createPlayer();
         this.modifySettings(this.scene, canvas);
 
         this.engine.runRenderLoop(() => this.scene.render());
         window.addEventListener("resize", () => this.engine.resize());
-
     }
 
 
@@ -25,7 +26,7 @@ export class Map {
 
         // Collisions + gravité (comme tp1_exemple3/4)
         scene.collisionsEnabled = true;
-        scene.gravity = new BABYLON.Vector3(0, -0.5, 0);
+        // scene.gravity = new BABYLON.Vector3(0, -0.1, 0);
 
         // Un petit boost d'ambiance pour ne pas être trop sombre
         scene.ambientColor = new BABYLON.Color3(0.25, 0.25, 0.3);
@@ -35,7 +36,16 @@ export class Map {
 
         // this.camera = this.createFpsCamera(scene);
 
+        scene.registerBeforeRender(() => {
+            this.beforeRenderUpdate();
+        })
+
         return scene;
+    }
+
+    beforeRenderUpdate(){
+        this.deltaTime = this.scene.getEngine().getDeltaTime() / 1000.0;
+        this.player.beforeRenderUpdate()
     }
 
     createLights(scene) {
@@ -131,8 +141,8 @@ export class Map {
         });
     }
 
-    setUpCamera() {
-        const camera = createFPSCamera(this.scene, this.canvas);
+    createPlayer() {
+        this.player = new Player(this.scene, this.canvas, this)
     }
 
     modifySettings(scene, canvas) {
