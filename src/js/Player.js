@@ -1,3 +1,5 @@
+import * as BABYLON from '@babylonjs/core'
+
 import { PlayerInput } from "./PlayerInput.js";
 
 export class Player {
@@ -90,7 +92,7 @@ export class Player {
         // this.camera.setTarget(this.player.position)
     }
 
-      beforeRenderUpdate() {
+    beforeRenderUpdate() {
         this.deltaTime = this.map.deltaTime;
         this.updateFromControls()
     }

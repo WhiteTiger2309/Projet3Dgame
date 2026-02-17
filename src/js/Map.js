@@ -1,3 +1,5 @@
+import * as BABYLON from '@babylonjs/core'
+
 import { Player } from './Player.js';
 
 export class Map {

@@ -1,3 +1,5 @@
+import * as BABYLON from '@babylonjs/core'
+
 export class PlayerInput {
 
     constructor(scene) {
