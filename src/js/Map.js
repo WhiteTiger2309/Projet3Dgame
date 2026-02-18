@@ -38,7 +38,7 @@ export class Map {
 
         this.engine.runRenderLoop(() => this.scene.render());
         window.addEventListener("resize", () => this.engine.resize());
-        
+
     }
 
     createScene() {
@@ -63,17 +63,17 @@ export class Map {
         return scene;
     }
 
-    createBox(){
-        let box = BABYLON.MeshBuilder.CreateBox("box", { width: 1, depth: 1, height: 1 }, this.scene);
-        box.material = new BABYLON.StandardMaterial("boxMat", this.scene);
+    createBox() {
+        this.box = BABYLON.MeshBuilder.CreateBox("box", { width: 1, depth: 1, height: 1 }, this.scene);
+        this.box.material = new BABYLON.StandardMaterial("boxMat", this.scene);
         // box.position = new BABYLON.Vector3(-8, 30, 7);
-        box.position = new BABYLON.Vector3(3, 30, -10);
-        box.checkCollisions = true;
-        const boxAggregate = new BABYLON.PhysicsAggregate(box, BABYLON.PhysicsShapeType.BOX, { mass: .25, friction: 0.75, restitution: 0.3 }, this.scene);
+        this.box.position = new BABYLON.Vector3(3, 30, -10);
+        const boxAggregate = new BABYLON.PhysicsAggregate(this.box, BABYLON.PhysicsShapeType.BOX, { mass: 50.25, friction: 0.75, restitution: 0 }, this.scene);
     }
 
-    addStaticPhysics(mesh){
-        const meshAggregate = new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH, { mass: 0, friction: 0.7, restitution: 0.2 }, this.scene);
+    addStaticPhysics(mesh, shapeName) {
+        const shapeType = BABYLON.PhysicsShapeType[shapeName];
+        const meshAggregate = new BABYLON.PhysicsAggregate(mesh, shapeType, { mass: 0, friction: 0.7, restitution: 0.2 }, this.scene);
         meshAggregate.body.setMotionType(BABYLON.PhysicsMotionType.STATIC);
     }
 
@@ -111,8 +111,7 @@ export class Map {
         mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
         ground.material = mat;
 
-        ground.checkCollisions = true;
-        this.addStaticPhysics(ground)
+        this.addStaticPhysics(ground, "BOX")
 
         return ground;
     }
@@ -127,9 +126,8 @@ export class Map {
             const mesh = BABYLON.MeshBuilder.CreateBox(name, { size }, scene);
             mesh.position = position.clone();
             mesh.material = ruinMat;
-            mesh.checkCollisions = true;
 
-            this.addStaticPhysics(mesh)
+            this.addStaticPhysics(mesh, "BOX")
 
             return mesh;
         };
@@ -142,8 +140,7 @@ export class Map {
         );
         ship.position = new BABYLON.Vector3(0, 1, -18);
         ship.material = ruinMat;
-        ship.checkCollisions = true;
-        this.addStaticPhysics(ship)
+        this.addStaticPhysics(ship, "BOX")
 
 
         // Arche / pylônes simplifiés
@@ -157,8 +154,7 @@ export class Map {
         );
         lintel.position = new BABYLON.Vector3(15, 4, 8);
         lintel.material = ruinMat;
-        lintel.checkCollisions = true;
-        this.addStaticPhysics(lintel)
+        this.addStaticPhysics(lintel, "BOX")
 
 
         // Quelques rochers
@@ -180,9 +176,8 @@ export class Map {
             rock.position = p.clone();
             rock.scaling.y = 0.6;
             rock.material = rockMat;
-            rock.checkCollisions = true;
 
-            this.addStaticPhysics(rock)
+            this.addStaticPhysics(rock, "CONVEX_HULL")
 
         });
     }

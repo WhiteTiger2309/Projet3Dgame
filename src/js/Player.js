@@ -47,27 +47,16 @@ export class Player {
     createPlayer() {
         let playerHeight = 1.8
         let playerWidth = 1
-        let playerDepth = 1
+        let defaultPos = new BABYLON.Vector3(0, 5, -10)
 
-        this.player = BABYLON.MeshBuilder.CreateBox(
-            "player",
-            { width: playerWidth, depth: playerDepth, height: playerHeight },
-            this.scene
-        );
+        this.player = new BABYLON.TransformNode("playerRoot", this.scene);
+        // this.player = BABYLON.MeshBuilder.CreateCapsule("player", { height: playerHeight, radius: playerWidth / 2 }, this.scene);
 
-        this.player.ellipsoid = new BABYLON.Vector3((playerWidth / 2), (playerHeight / 2), (playerDepth / 2));
+        this.player.position = defaultPos;
+
+        this.character = new BABYLON.PhysicsCharacterController(defaultPos, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
 
         this.player.isVisible = true;
-
-        this.player.checkCollisions = true;
-        // a faire enlever les checkCollisions et changer fonction updateFromControls pour utiliser les forces sur le this.playerAggregate.body
-
-        this.player.position = new BABYLON.Vector3(0, 2, -10);
-
-        // pour l'instant player Aggregate inutile 
-        // this.playerAggregate = new BABYLON.PhysicsAggregate(this.player, BABYLON.PhysicsShapeType.MESH, { mass: 0, friction: 0.7, restitution: 0.2 }, this.scene);
-        // this.playerAggregate.body.setMotionType(BABYLON.PhysicsMotionType.STATIC);
-        // this.playerAggregate.body.setMotionType(BABYLON.PhysicsMotionType.DYNAMIC);
 
         this.head = new BABYLON.TransformNode("head", this.scene);
         this.head.position.y = 0.8;
@@ -82,12 +71,12 @@ export class Player {
         this.camera.angularSensibility = 3000;
         this.camera.inertia = 0.7;
 
-        this.floorRay = new BABYLON.Ray(this.player.position, BABYLON.Vector3.Down(), (playerHeight / 2) + 0.05);
-        this.floorRay.parent = this.player;  // pas utile ?
-        
-        // var rayHelper = new BABYLON.RayHelper(this.floorRay);
-        // rayHelper.show(this.scene);
-        
+        this.floorRay = new BABYLON.Ray(this.player.position, BABYLON.Vector3.Down(), (playerHeight / 2) + 0.005);
+        // this.floorRay.parent = this.player;  // pas utile ?
+
+        var rayHelper = new BABYLON.RayHelper(this.floorRay);
+        rayHelper.show(this.scene);
+
         this.camera.parent = this.head;
 
         // // temp camera pour debug commenter la ligne au dessus aussi
@@ -133,24 +122,23 @@ export class Player {
         this.velocity.x = move.x * this.SPEED;
         this.velocity.z = move.z * this.SPEED;
 
-        this.player.moveWithCollisions(
-            this.velocity.scale(this.deltaTime)
-        );
+        this.character.moveWithCollisions(this.velocity.scale(this.deltaTime));
+        this.player.position.copyFrom(this.character.getPosition());
 
         this.checkGround();
 
         // debug
-        if (this.input.test){
+        if (this.input.test) {
             console.log(this.player)
         }
     }
 
     checkGround() {
-        let predicate = function(mesh) {
-            if (mesh.name.includes("player")){
+        let predicate = function (mesh) {
+            if (mesh.name.includes("player")) {
                 return false;
             }
-            else if (mesh.isPickable){
+            else if (mesh.isPickable) {
                 return true;
             }
         }
