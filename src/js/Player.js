@@ -14,15 +14,15 @@ export class Player {
         this.scene = scene;
         this.canvas = canvas;
         this.map = map;
+        this.GRAVITY = this.map.scene._physicsEngine.gravity;
 
-        this.velocity = new BABYLON.Vector3(0, 0, 0);
-
-        this.SPEED = 5;
-        this.JUMP_FORCE = 4.5;
-        this.GRAVITY = -9.81;
-        this.SENSITIVITY = 0.0006;
+        this.SPEED = 5.7;
+        this.JUMP_FORCE = 4.7;
+        this.SENSITIVITY = 0.0008;
 
         this.isGrounded = false;
+
+        this.velocity = new BABYLON.Vector3(0, 0, 0);
 
         this.createPlayer()
         this.cameraRotation()
@@ -51,12 +51,11 @@ export class Player {
 
         this.player = new BABYLON.TransformNode("playerRoot", this.scene);
         // this.player = BABYLON.MeshBuilder.CreateCapsule("player", { height: playerHeight, radius: playerWidth / 2 }, this.scene);
+        // this.player.isVisible = true;
 
         this.player.position = defaultPos;
 
         this.character = new BABYLON.PhysicsCharacterController(defaultPos, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
-
-        this.player.isVisible = true;
 
         this.head = new BABYLON.TransformNode("head", this.scene);
         this.head.position.y = 0.8;
@@ -64,18 +63,12 @@ export class Player {
 
         this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero(), this.scene);
         this.camera.minZ = 0.1;
-        this.camera.fov = 1
+        this.camera.fov = 1.1
 
         // a tester si c'est utile ?
         this.camera.speed = 0.6;
         this.camera.angularSensibility = 3000;
         this.camera.inertia = 0.7;
-
-        this.floorRay = new BABYLON.Ray(this.player.position, BABYLON.Vector3.Down(), (playerHeight / 2) + 0.005);
-        // this.floorRay.parent = this.player;  // pas utile ?
-
-        var rayHelper = new BABYLON.RayHelper(this.floorRay);
-        rayHelper.show(this.scene);
 
         this.camera.parent = this.head;
 
@@ -85,20 +78,21 @@ export class Player {
         // this.camera.setTarget(this.player.position)
     }
 
+    // fonction appelé à chaque frame
     beforeRenderUpdate() {
         this.deltaTime = this.map.deltaTime;
+        this.updateGrounded()
+        this.applyGravity()
         this.updateFromControls()
     }
 
     updateFromControls() {
-        if (!this.isGrounded) {
-            this.velocity.y += this.GRAVITY * this.deltaTime;
-        }
+        // jump
         if (this.input.inputMap["Space"] && this.isGrounded) {
             this.velocity.y = this.JUMP_FORCE;
-            this.isGrounded = false;
         }
 
+        // movement
         let inputX = this.input.horizontal || 0;
         let inputZ = this.input.vertical || 0;
 
@@ -119,36 +113,48 @@ export class Player {
             move.normalize();
         }
 
-        this.velocity.x = move.x * this.SPEED;
-        this.velocity.z = move.z * this.SPEED;
+        // apply movement
+        if (this.isGrounded) {
+            if (move.length() > 0) {
+                this.velocity.x = move.x * this.SPEED;
+                this.velocity.z = move.z * this.SPEED;
+            }
+            else {
+                this.velocity.x = 0;
+                this.velocity.z = 0;
+            }
+        }
+        else if (move.length() > 0) {
+            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.SPEED, this.deltaTime * 3);
+            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.SPEED, this.deltaTime * 3);
+        }
+        else {
+            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.SPEED, this.deltaTime * 10);
+            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.SPEED, this.deltaTime * 10);
+        }
 
         this.character.moveWithCollisions(this.velocity.scale(this.deltaTime));
         this.player.position.copyFrom(this.character.getPosition());
 
-        this.checkGround();
-
         // debug
         if (this.input.test) {
-            console.log(this.player)
+            console.log(this.player._position)
         }
     }
 
-    checkGround() {
-        let predicate = function (mesh) {
-            if (mesh.name.includes("player")) {
-                return false;
-            }
-            else if (mesh.isPickable) {
-                return true;
-            }
+    applyGravity() {
+        if (!this.isGrounded) {
+            this.velocity.y += this.GRAVITY.y * this.deltaTime;
         }
+    }
 
-        let hit = this.scene.pickWithRay(this.floorRay, predicate);
-
-        if (hit.hit) {
-            this.isGrounded = true;
-        } else {
-            this.isGrounded = false;
+    updateGrounded() {
+        const supportInfo = this.character.checkSupport(this.deltaTime, this.scene.gravity.normalize());
+        if (supportInfo.supportedState === BABYLON.CharacterSupportedState.SUPPORTED) {
+            this.isGrounded = true
+        }
+        else {
+            this.isGrounded = false
         }
     }
 
