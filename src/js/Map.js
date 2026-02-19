@@ -86,15 +86,31 @@ export class Map {
         this.player.beforeRenderUpdate()
 
 
-        this.platformTime += this.deltaTime;
+        // this.platformTime += this.deltaTime;
 
-        const offset = Math.sin(this.platformTime * this.platformSpeed) * this.platformAmplitude;
+        // const offset = Math.sin(this.platformTime * this.platformSpeed) * this.platformAmplitude;
 
-        const newPos = new BABYLON.Vector3(
-            this.platformStartX + offset,
-            this.ship.position.y,
-            this.ship.position.z,
-        );
+        // const newPos = new BABYLON.Vector3(
+        //     this.platformStartX + offset,
+        //     this.ship.position.y,
+        //     this.ship.position.z,
+        // );
+
+        // this.platformAggregate.body.setTargetTransform(
+        //     newPos,
+        //     this.ship.rotationQuaternion || BABYLON.Quaternion.Identity()
+        // );
+
+
+        const move = this.speed * this.deltaTime * this.direction;
+
+        this.distance += move;
+
+        if (Math.abs(this.distance) >= this.maxDistance) {
+            this.direction *= -1;
+        }
+
+        const newPos = this.ship.position.add(new BABYLON.Vector3(move, 0, 0));
 
         this.platformAggregate.body.setTargetTransform(
             newPos,
@@ -164,10 +180,15 @@ export class Map {
         this.ship.material = ruinMat;
         this.platformAggregate = new BABYLON.PhysicsAggregate(this.ship, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.7, restitution: 0.2 }, this.scene);
         this.platformAggregate.body.setMotionType(BABYLON.PhysicsMotionType.ANIMATED);
-        this.platformTime = 0;
-        this.platformAmplitude = 5;   // distance max
-        this.platformSpeed = 1;       // vitesse
-        this.platformStartX = this.ship.position.x;
+        // this.platformTime = 0;
+        // this.platformAmplitude = 5;   // distance max
+        // this.platformSpeed = 1;       // vitesse
+        // this.platformStartX = this.ship.position.x;
+
+        this.direction = 1;
+        this.distance = 0;
+        this.maxDistance = 5;
+        this.speed = 2
 
         const ship2 = BABYLON.MeshBuilder.CreateBox(
             "ship2",

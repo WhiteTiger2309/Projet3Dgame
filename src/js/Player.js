@@ -3,14 +3,13 @@ import * as BABYLON from '@babylonjs/core'
 import { PlayerInput } from "./PlayerInput.js";
 
 export class Player {
-    scene;
-    canvas;
-    camera;
-    input;
-    deltaTime;
-    map;
 
-    constructor(scene, canvas, map) {
+    constructor(scene, canvas, map, playerPosition) {
+        this.isGrounded = false;
+        this.groundDisableTimer = 0;
+        this.jumpBufferTimer = 0;
+        this.velocity = new BABYLON.Vector3(0, 0, 0);
+
         this.scene = scene;
         this.canvas = canvas;
         this.map = map;
@@ -21,11 +20,10 @@ export class Player {
         this.SENSITIVITY = 0.0008;
         this.MAX_SLOPE_ANGLE = 60;
 
-        this.isGrounded = false;
+        this.GROUND_DISABLE_TIME = 0.1;
+        this.JUMP_BUFFER_TIME = 0.15;
 
-        this.velocity = new BABYLON.Vector3(0, 0, 0);
-
-        this.createPlayer()
+        this.createPlayer(playerPosition)
         this.cameraRotation()
 
         this.input = new PlayerInput(scene);
@@ -45,15 +43,17 @@ export class Player {
         });
     }
 
-    createPlayer() {
+    createPlayer(defaultPos) {
         let playerHeight = 1.8
         let playerWidth = 1
-        let defaultPos = new BABYLON.Vector3(0, 3, -14)
+        if (defaultPos == undefined) {
+            defaultPos = new BABYLON.Vector3(0, 3, -14)
+        }
 
-        this.player = new BABYLON.TransformNode("playerRoot", this.scene);
+        this.player = new BABYLON.TransformNode("player", this.scene);
         // this.player = BABYLON.MeshBuilder.CreateCapsule("player", { height: playerHeight, radius: playerWidth / 2 }, this.scene);
-        // this.player.isVisible = true;
 
+        this.player.isVisible = false;
         this.player.position = defaultPos;
 
         this.character = new BABYLON.PhysicsCharacterController(defaultPos, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
@@ -73,7 +73,6 @@ export class Player {
 
         this.camera.parent = this.head;
 
-        // this.camera.position = new BABYLON.Vector3(-11, 1.8, -14.8)
         // // temp camera pour debug commenter la ligne au dessus aussi
         // this.camera.attachControl(this.canvas);
         // this.camera.position = new BABYLON.Vector3(-6, 6, -13.8)
@@ -112,53 +111,21 @@ export class Player {
             move.normalize();
         }
 
-        // // pour les pentes
-        if (this.isGrounded && this.groundNormal) {
-            const projected = this.projectOnPlane(move, this.groundNormal);
-            projected.normalize();
-            move = projected;
-        }
-
-        if (this.isGrounded && this.groundNormal) {
-            // a mettre dans utils ?
-            const angle = Math.acos(BABYLON.Vector3.Dot(this.groundNormal, BABYLON.Vector3.Up()));
-            const angleDeg = BABYLON.Tools.ToDegrees(angle);
-
-            if (angleDeg < this.MAX_SLOPE_ANGLE && this.isGrounded) {
-                if (move.y < 0) {
-                    this.velocity.y += move.y * this.SPEED;
-                }
-                else {
-                    const xzLength = Math.sqrt(move.x * move.x + move.z * move.z);
-                    if (xzLength > 0) {
-                        move.x /= xzLength;
-                        move.z /= xzLength;
-
-                        const lateralFactor = Math.cos(angle);
-
-                        let right = this.camera.getDirection(BABYLON.Axis.X);
-                        right.y = 0;
-                        right.normalize();
-
-                        const lateralDot = move.x * right.x + move.z * right.z;
-
-                        move.x -= right.x * lateralDot * (1 - lateralFactor);
-                        move.z -= right.z * lateralDot * (1 - lateralFactor);
-                    }
-                }
-
-            }
-            else {
-                this.isGrounded = false;
-            }
-        }
+        move = this.applyRampModification(move)
 
         // jump
-        if (this.input.inputMap["Space"] && this.isGrounded) {
-            // this.velocity.y += this.JUMP_FORCE;  // permet des super saut  à fix   surtout avec le bloc
-            this.velocity.y = this.JUMP_FORCE;  // bloque les saut pendant la monté
+        if (this.input.justPressed["Space"]) {
+            this.jumpBufferTimer = this.JUMP_BUFFER_TIME;
         }
-
+        if (this.jumpBufferTimer > 0) {
+            this.jumpBufferTimer -= this.deltaTime;
+        }
+        if (this.jumpBufferTimer > 0 && this.isGrounded) {
+            this.velocity.y = this.JUMP_FORCE;
+            this.isGrounded = false
+            this.groundDisableTimer = this.GROUND_DISABLE_TIME;
+            this.jumpBufferTimer = 0;
+        }
 
         // apply movement
         if (this.isGrounded) {
@@ -172,24 +139,56 @@ export class Player {
             }
         }
         else if (move.length() > 0) {
-                this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.SPEED, this.deltaTime * 3);
-                this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.SPEED, this.deltaTime * 3);
-            }
-            else {
-                this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.SPEED, this.deltaTime * 10);
-                this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.SPEED, this.deltaTime * 10);
-            }
+            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.SPEED, this.deltaTime * 3);
+            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.SPEED, this.deltaTime * 3);
+        }
+        else {
+            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.SPEED, this.deltaTime * 10);
+            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.SPEED, this.deltaTime * 10);
+        }
 
         this.character.moveWithCollisions(this.velocity.scale(this.deltaTime));
         this.player.position.copyFrom(this.character.getPosition());
 
         // debug
-        if (this.input.test) {
-            // console.log(this.player._position)
+        if (this.input.justPressed["KeyP"]) {
+            console.log(this.player._position)
             // console.log(this.velocity.y);
-            console.log("test");
             // console.log(this.camera.position);
         }
+    }
+
+    applyRampModification(move) {
+        if (this.isGrounded && this.groundNormal.y != 1) {
+            move = this.projectOnPlane(move, this.groundNormal).normalize();
+
+            const angle = Math.acos(BABYLON.Vector3.Dot(this.groundNormal, BABYLON.Vector3.Up()));
+            const angleDeg = BABYLON.Tools.ToDegrees(angle);
+
+            if (this.isGrounded && angleDeg < this.MAX_SLOPE_ANGLE) {
+                if (move.y < 0) {
+                    this.velocity.y += move.y * this.SPEED;
+                }
+                else {
+                    const xzLength = Math.sqrt(move.x * move.x + move.z * move.z);
+                    if (xzLength > 0) {
+                        move.x /= xzLength;
+                        move.z /= xzLength;
+                        const lateralFactor = Math.cos(angle);
+                        let right = this.camera.getDirection(BABYLON.Axis.X);
+                        right.y = 0;
+                        right.normalize();
+                        const lateralDot = move.x * right.x + move.z * right.z;
+                        move.x -= right.x * lateralDot * (1 - lateralFactor);
+                        move.z -= right.z * lateralDot * (1 - lateralFactor);
+                    }
+                }
+            }
+            else {
+                this.isGrounded = false;
+            }
+        }
+        return move
     }
 
     projectOnPlane(vector, normal) {
@@ -207,9 +206,13 @@ export class Player {
     }
 
     updateGrounded() {
+        if (this.groundDisableTimer > 0) {
+            this.groundDisableTimer -= this.deltaTime;
+            this.isGrounded = false;
+            return;
+        }
         this.supportInfo = this.character.checkSupport(this.deltaTime, this.GRAVITY.normalizeToNew());
         if (this.supportInfo.supportedState === BABYLON.CharacterSupportedState.SUPPORTED) {
-            // console.log(supportInfo.averageSurfaceVelocity)
             this.isGrounded = true
             this.groundNormal = this.supportInfo.averageSurfaceNormal;
         }

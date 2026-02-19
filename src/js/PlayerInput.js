@@ -6,8 +6,12 @@ export class PlayerInput {
         scene.actionManager = new BABYLON.ActionManager(scene);
 
         this.inputMap = {};
+        this.justPressed = {};
         scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, (evt) => {
             const code = evt.sourceEvent.code;
+            if (!this.inputMap[code]) {
+                this.justPressed[code] = true;
+            }
             this.inputMap[code] = true;
         }));
         scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, (evt) => {
@@ -17,6 +21,7 @@ export class PlayerInput {
 
         scene.onBeforeRenderObservable.add(() => {
             this.updateFromKeyboard();
+            this.clearFrameInput();
         });
     }
 
@@ -45,14 +50,10 @@ export class PlayerInput {
             this.horizontal = 0;
             this.horizontalAxis = 0;
         }
+    }
 
-        // temp pour debug
-        if (this.inputMap["KeyP"] && this.test == false) {
-            this.test = true
-        }
-        else{
-            this.test = false
-        }
+    clearFrameInput() {
+        this.justPressed = {};
     }
 
 }
