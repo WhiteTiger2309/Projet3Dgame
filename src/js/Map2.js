@@ -1,91 +1,39 @@
 import * as BABYLON from '@babylonjs/core'
-import HavokPhysics from "@babylonjs/havok";
 
-import { Player } from './Player.js';
+import { CreateMap } from './CreateMap.js';
+import { addStaticPhysics } from './utils/utils.js';
 
-export class Map {
-    scene;
-    engine;
-    player;
-    deltaTime;
+export class Map2 extends CreateMap {
+    constructor(canvas, engine, havokPlugin) {
+        const PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 3, -10)
+        const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 2, 0)
 
-    constructor(canvas) {
-        this.engine = new BABYLON.Engine(canvas, true);
-        this.canvas = canvas
+        super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION)
 
-        this.start()
+        this.createMap()
+
+        super.startRender()
     }
 
-
-    async start() {
-        await this.initGame()
-    }
-
-    async initGame() {
-        this.havokInstance = await HavokPhysics();
-        this.havokPlugin = new BABYLON.HavokPlugin(true, this.havokInstance);
-
-        this.scene = this.createScene();
-
-        this.createLights(this.scene)
+    createMap() {
         this.createGround(this.scene);
         this.createSimpleRuins(this.scene);
-
         this.createBox()
-
-        this.createPlayer();
-        this.modifySettings(this.scene, this.canvas);
-
-        this.engine.runRenderLoop(() => this.scene.render());
-        window.addEventListener("resize", () => this.engine.resize());
-
+        this.createDuck()
     }
 
-    createScene() {
-        const scene = new BABYLON.Scene(this.engine);
-
-        scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), this.havokPlugin);
-
-        // Collisions + gravité (comme tp1_exemple3/4)
-        scene.collisionsEnabled = false;
-        // scene.gravity = new BABYLON.Vector3(0, -0.1, 0);
-
-        // Un petit boost d'ambiance pour ne pas être trop sombre
+    changeSceneBackground(scene) {
         scene.ambientColor = new BABYLON.Color3(0.25, 0.25, 0.3);
-
-        // Un peu d'atmosphère, sans aller au-delà du prototype
-        // scene.clearColor = new BABYLON.Color4(0.02, 0.04, 0.06, 1);
         scene.clearColor = new BABYLON.Color4(0.02, 0.1, 0.1, 0.5);
-
-        scene.registerBeforeRender(() => {
-            this.beforeRenderUpdate();
-        })
-        // scene.onAfterPhysicsObservable.add(() => {
-        //     this.player.afterPhysicsUpdate();
-        // })
-
-        return scene;
+        // BABYLON.ImportMeshAsync("lightbluesky.glb").then((result) => {
+        //     result.meshes.forEach(mesh => {
+        //         mesh.infiniteDistance = true;
+        //         mesh.checkCollisions = false;
+        //     });
+        // });
     }
 
-    createBox() {
-        this.box = BABYLON.MeshBuilder.CreateBox("box", { width: 1, depth: 1, height: 1 }, this.scene);
-        this.box.material = new BABYLON.StandardMaterial("boxMat", this.scene);
-        // box.position = new BABYLON.Vector3(-8, 30, 7);
-        this.box.position = new BABYLON.Vector3(3, 30, -10);
-        const boxAggregate = new BABYLON.PhysicsAggregate(this.box, BABYLON.PhysicsShapeType.BOX, { mass: 50.25, friction: 0.75, restitution: 0 }, this.scene);
-    }
-
-    addStaticPhysics(mesh, shapeName) {
-        const shapeType = BABYLON.PhysicsShapeType[shapeName];
-        const meshAggregate = new BABYLON.PhysicsAggregate(mesh, shapeType, { mass: 0, friction: 0.7, restitution: 0.2 }, this.scene);
-        meshAggregate.body.setMotionType(BABYLON.PhysicsMotionType.STATIC);
-    }
-
-    beforeRenderUpdate() {
-        this.deltaTime = this.scene.getEngine().getDeltaTime() / 1000.0;
-        this.player.beforeRenderUpdate()
-
-
+    mapBeforeRenderUpdate() {
         // this.platformTime += this.deltaTime;
 
         // const offset = Math.sin(this.platformTime * this.platformSpeed) * this.platformAmplitude;
@@ -100,7 +48,6 @@ export class Map {
         //     newPos,
         //     this.ship.rotationQuaternion || BABYLON.Quaternion.Identity()
         // );
-
 
         const move = this.speed * this.deltaTime * this.direction;
 
@@ -119,21 +66,25 @@ export class Map {
 
     }
 
-    createLights(scene) {
-        const hemi = new BABYLON.HemisphericLight(
-            "hemi",
-            new BABYLON.Vector3(0, 1, 0),
-            scene
-        );
-        hemi.intensity = 0.75;
+    createDuck() {
+        BABYLON.ImportMeshAsync("duckTest.glb").then((result) => {
+            let duck = result.meshes[0]
+            duck.position.y = 0.5
+            duck.rotationQuaternion = null
+            duck.rotation.y = 0.4
+            result.meshes.forEach(mesh => {
+                if (!(mesh.name == "__root__")) {
+                    addStaticPhysics(mesh, "MESH")
+                }
+            });
+        });
+    }
 
-        const dir = new BABYLON.DirectionalLight(
-            "dir0",
-            new BABYLON.Vector3(-0.5, -1, 0.2),
-            scene
-        );
-        dir.intensity = 1.25;
-        dir.position = new BABYLON.Vector3(50, 80, -30);
+    createBox() {
+        this.box = BABYLON.MeshBuilder.CreateBox("box", { width: 1, depth: 1, height: 1 }, this.scene);
+        this.box.material = new BABYLON.StandardMaterial("boxMat", this.scene);
+        this.box.position = new BABYLON.Vector3(3, 30, -10);
+        const boxAggregate = new BABYLON.PhysicsAggregate(this.box, BABYLON.PhysicsShapeType.BOX, { mass: 50.25, friction: 0.75, restitution: 0 }, this.scene);
     }
 
     createGround(scene) {
@@ -148,7 +99,7 @@ export class Map {
         mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
         ground.material = mat;
 
-        this.addStaticPhysics(ground, "BOX")
+        addStaticPhysics(ground, "BOX")
 
         return ground;
     }
@@ -164,7 +115,7 @@ export class Map {
             mesh.position = position.clone();
             mesh.material = ruinMat;
 
-            this.addStaticPhysics(mesh, "BOX")
+            addStaticPhysics(mesh, "BOX")
 
             return mesh;
         };
@@ -175,7 +126,6 @@ export class Map {
             { width: 6, height: 2, depth: 10 },
             scene
         );
-        // this.ship.position = new BABYLON.Vector3(0, 4.63, -25.15); // pour rotate 2.2
         this.ship.position = new BABYLON.Vector3(0, 3.787, -26.41);
         this.ship.material = ruinMat;
         this.platformAggregate = new BABYLON.PhysicsAggregate(this.ship, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.7, restitution: 0.2 }, this.scene);
@@ -198,7 +148,7 @@ export class Map {
         ship2.position = new BABYLON.Vector3(0, 1, -18);
         ship2.material = ruinMat;
         ship2.rotate(BABYLON.Vector3.Left(), 2.5)
-        this.addStaticPhysics(ship2, "BOX")
+        addStaticPhysics(ship2, "BOX")
 
         const ship3 = BABYLON.MeshBuilder.CreateBox(
             "ship3",
@@ -208,8 +158,7 @@ export class Map {
         ship3.position = new BABYLON.Vector3(5, 1, -18);
         ship3.material = ruinMat;
         ship3.rotate(BABYLON.Vector3.Left(), 2)
-        this.addStaticPhysics(ship3, "BOX")
-
+        addStaticPhysics(ship3, "BOX")
 
         // Arche / pylônes simplifiés
         makeBlock("pillar1", 3, new BABYLON.Vector3(12, 1.5, 8));
@@ -222,7 +171,7 @@ export class Map {
         );
         lintel.position = new BABYLON.Vector3(15, 4, 8);
         lintel.material = ruinMat;
-        this.addStaticPhysics(lintel, "BOX")
+        addStaticPhysics(lintel, "BOX")
 
 
         // Quelques rochers
@@ -245,27 +194,8 @@ export class Map {
             rock.scaling.y = 0.6;
             rock.material = rockMat;
 
-            this.addStaticPhysics(rock, "CONVEX_HULL")
+            addStaticPhysics(rock, "CONVEX_HULL")
 
         });
     }
-
-    createPlayer() {
-        this.player = new Player(this.scene, this.canvas, this)
-    }
-
-    modifySettings(scene, canvas) {
-        // Pointer lock (comme tp1_exemple4) : click dans le canvas => souris verrouillée
-        scene.onPointerDown = () => {
-            if (!scene.alreadyLocked) {
-                canvas.requestPointerLock();
-            }
-        };
-
-        document.addEventListener("pointerlockchange", () => {
-            const element = document.pointerLockElement || null;
-            scene.alreadyLocked = !!element;
-        });
-    }
-
 }

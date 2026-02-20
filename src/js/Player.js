@@ -4,7 +4,7 @@ import { PlayerInput } from "./PlayerInput.js";
 
 export class Player {
 
-    constructor(scene, canvas, map, playerPosition) {
+    constructor(scene, canvas, map, SPAWN_POS, SPAWN_ROTATION) {
         this.isGrounded = false;
         this.groundDisableTimer = 0;
         this.jumpBufferTimer = 0;
@@ -23,7 +23,7 @@ export class Player {
         this.GROUND_DISABLE_TIME = 0.1;
         this.JUMP_BUFFER_TIME = 0.15;
 
-        this.createPlayer(playerPosition)
+        this.createPlayer(SPAWN_POS, SPAWN_ROTATION)
         this.cameraRotation()
 
         this.input = new PlayerInput(scene);
@@ -43,23 +43,27 @@ export class Player {
         });
     }
 
-    createPlayer(defaultPos) {
+    createPlayer(SPAWN_POS, SPAWN_ROTATION) {
         let playerHeight = 1.8
         let playerWidth = 1
-        if (defaultPos == undefined) {
-            defaultPos = new BABYLON.Vector3(0, 3, -14)
+        if (SPAWN_POS == undefined) {
+            SPAWN_POS = new BABYLON.Vector3(0, 3, 0)
         }
 
         this.player = new BABYLON.TransformNode("player", this.scene);
         // this.player = BABYLON.MeshBuilder.CreateCapsule("player", { height: playerHeight, radius: playerWidth / 2 }, this.scene);
 
         this.player.isVisible = false;
-        this.player.position = defaultPos;
+        this.player.position = SPAWN_POS;
 
-        this.character = new BABYLON.PhysicsCharacterController(defaultPos, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
+        this.character = new BABYLON.PhysicsCharacterController(SPAWN_POS, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
 
         this.head = new BABYLON.TransformNode("head", this.scene);
         this.head.position.y = 0.8;
+        if (SPAWN_ROTATION == undefined) {
+            SPAWN_ROTATION = new BABYLON.Vector3(0, 0, 0)
+        }
+        this.head.rotation = SPAWN_ROTATION
         this.head.parent = this.player;
 
         this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero(), this.scene);
@@ -153,7 +157,7 @@ export class Player {
         // debug
         if (this.input.justPressed["KeyP"]) {
             console.log(this.player._position)
-            // console.log(this.velocity.y);
+            // console.log(this.velocity.z);
             // console.log(this.camera.position);
         }
     }
