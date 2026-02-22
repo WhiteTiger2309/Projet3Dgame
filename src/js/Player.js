@@ -4,11 +4,13 @@ import { PlayerInput } from "./PlayerInput.js";
 
 export class Player {
 
-    constructor(scene, canvas, map, SPAWN_POS, SPAWN_ROTATION) {
+    constructor(scene, canvas, map, respawnPos, SPAWN_ROTATION) {
         this.isGrounded = false;
         this.groundDisableTimer = 0;
         this.jumpBufferTimer = 0;
-        this.velocity = new BABYLON.Vector3(0, 0, 0);
+        
+        this.velocity = BABYLON.Vector3.Zero();
+        this.inheritedVelocity = BABYLON.Vector3.Zero();
 
         this.scene = scene;
         this.canvas = canvas;
@@ -23,12 +25,57 @@ export class Player {
         this.GROUND_DISABLE_TIME = 0.1;
         this.JUMP_BUFFER_TIME = 0.15;
 
-        this.createPlayer(SPAWN_POS, SPAWN_ROTATION)
+        this.createPlayer(respawnPos, SPAWN_ROTATION)
         this.cameraRotation()
 
         this.input = new PlayerInput(scene);
     }
 
+
+    createPlayer(respawnPos, SPAWN_ROTATION) {
+        let playerHeight = 1.8;
+        let playerWidth = 1;
+        if (respawnPos == undefined) {
+            respawnPos = new BABYLON.Vector3(0, 3, 0)
+        }
+        this.respawnPos = respawnPos;
+
+        this.player = new BABYLON.TransformNode("player", this.scene);
+        this.player.isVisible = false;
+        // this.player = BABYLON.MeshBuilder.CreateCapsule("player", { height: playerHeight, radius: playerWidth / 2 }, this.scene);
+        // this.player.isVisible = true;
+
+        this.player.position.copyFrom(respawnPos);
+
+        this.character = new BABYLON.PhysicsCharacterController(respawnPos, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
+
+        this.head = new BABYLON.TransformNode("head", this.scene);
+        this.head.position.y = 0.8;
+        if (SPAWN_ROTATION == undefined) {
+            SPAWN_ROTATION = BABYLON.Vector3.Zero();
+        }
+        this.head.rotation.copyFrom(SPAWN_ROTATION);
+        this.head.parent = this.player;
+
+        this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero(), this.scene);
+        this.camera.minZ = 0.1;
+        this.camera.fov = 1.1
+
+        this.pickRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero(), 4);
+
+        this.camera.parent = this.head;
+
+
+        // // // // temp camera pour debug commenter la ligne au dessus aussi
+        // this.camera.attachControl(this.canvas);
+        // this.camera.position = new BABYLON.Vector3(-6, 6, -13.8)
+        // this.camera.setTarget(this.player.position)
+        // this.camera.speed = 0.6;
+        // this.camera.angularSensibility = 3000;
+        // this.camera.inertia = 0.7;
+        // var rayHelper = new BABYLON.RayHelper(this.pickRay);
+        // rayHelper.show(this.scene);
+    }
 
     cameraRotation() {
         this.scene.onPointerObservable.add((pointerInfo) => {
@@ -43,57 +90,25 @@ export class Player {
         });
     }
 
-    createPlayer(SPAWN_POS, SPAWN_ROTATION) {
-        let playerHeight = 1.8
-        let playerWidth = 1
-        if (SPAWN_POS == undefined) {
-            SPAWN_POS = new BABYLON.Vector3(0, 3, 0)
-        }
-
-        this.player = new BABYLON.TransformNode("player", this.scene);
-        // this.player = BABYLON.MeshBuilder.CreateCapsule("player", { height: playerHeight, radius: playerWidth / 2 }, this.scene);
-
-        this.player.isVisible = false;
-        this.player.position = SPAWN_POS;
-
-        this.character = new BABYLON.PhysicsCharacterController(SPAWN_POS, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
-
-        this.head = new BABYLON.TransformNode("head", this.scene);
-        this.head.position.y = 0.8;
-        if (SPAWN_ROTATION == undefined) {
-            SPAWN_ROTATION = new BABYLON.Vector3(0, 0, 0)
-        }
-        this.head.rotation = SPAWN_ROTATION
-        this.head.parent = this.player;
-
-        this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero(), this.scene);
-        this.camera.minZ = 0.1;
-        this.camera.fov = 1.1
-
-        // a tester si c'est utile ?
-        this.camera.speed = 0.6;
-        this.camera.angularSensibility = 3000;
-        this.camera.inertia = 0.7;
-
-        this.camera.parent = this.head;
-
-        // // temp camera pour debug commenter la ligne au dessus aussi
-        // this.camera.attachControl(this.canvas);
-        // this.camera.position = new BABYLON.Vector3(-6, 6, -13.8)
-        // this.camera.setTarget(this.player.position)
-    }
-
     // fonction appelé à chaque frame
     beforeRenderUpdate() {
         this.deltaTime = this.map.deltaTime;
-        this.updateGrounded()
-        this.applyGravity()
-        this.updateFromControls()
+        this.updateGrounded();
+        this.applyGravity();
+        this.updateFromControls();
+        this.updatePickRayPos();
+        this.checkHit();
+
+        // debug
+        if (this.input.justPressed["KeyP"]) {
+            // console.log(this.player._position)
+            this.respawn()
+            // console.log(this.velocity.z);
+        }
     }
 
 
     updateFromControls() {
-
         // movement
         let inputX = this.input.horizontal || 0;
         let inputZ = this.input.vertical || 0;
@@ -125,8 +140,11 @@ export class Player {
             this.jumpBufferTimer -= this.deltaTime;
         }
         if (this.jumpBufferTimer > 0 && this.isGrounded) {
-            this.velocity.y = this.JUMP_FORCE;
-            this.isGrounded = false
+            this.inheritedVelocity.copyFrom(this.supportInfo.averageSurfaceVelocity);
+            this.velocity.addInPlace(this.inheritedVelocity);
+
+            this.velocity.y += this.JUMP_FORCE;
+            this.isGrounded = false;
             this.groundDisableTimer = this.GROUND_DISABLE_TIME;
             this.jumpBufferTimer = 0;
         }
@@ -141,6 +159,7 @@ export class Player {
                 this.velocity.x = 0;
                 this.velocity.z = 0;
             }
+            this.velocity.addInPlace(this.supportInfo.averageSurfaceVelocity);
         }
         else if (move.length() > 0) {
             this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.SPEED, this.deltaTime * 3);
@@ -153,13 +172,6 @@ export class Player {
 
         this.character.moveWithCollisions(this.velocity.scale(this.deltaTime));
         this.player.position.copyFrom(this.character.getPosition());
-
-        // debug
-        if (this.input.justPressed["KeyP"]) {
-            console.log(this.player._position)
-            // console.log(this.velocity.z);
-            // console.log(this.camera.position);
-        }
     }
 
     applyRampModification(move) {
@@ -217,13 +229,39 @@ export class Player {
         }
         this.supportInfo = this.character.checkSupport(this.deltaTime, this.GRAVITY.normalizeToNew());
         if (this.supportInfo.supportedState === BABYLON.CharacterSupportedState.SUPPORTED) {
-            this.isGrounded = true
+            this.isGrounded = true;
             this.groundNormal = this.supportInfo.averageSurfaceNormal;
         }
         else {
-            this.isGrounded = false
+            this.isGrounded = false;
             this.groundNormal = null;
         }
     }
 
+    checkHit() {
+        let predicate = function (mesh) {
+            return mesh.metadata?.isInteractable === true;
+        }
+
+        const pickInfo = this.scene.pickWithRay(this.pickRay, predicate);
+
+        if (pickInfo.hit) {
+            crosshair.style.display = 'block';
+            if (pickInfo.pickedMesh.metadata?.onInteract && this.input.justPressed["KeyE"]) {
+                pickInfo.pickedMesh.metadata.onInteract();
+            }
+        } else {
+            crosshair.style.display = 'none';
+        }
+    }
+
+    updatePickRayPos() {
+        this.camera.getForwardRayToRef(this.pickRay, this.pickRay.length);
+        this.pickRay.origin.copyFrom(this.head.getAbsolutePosition());
+    }
+
+    respawn() {
+        this.character.setPosition(this.respawnPos);
+        this.velocity = BABYLON.Vector3.Zero()
+    }
 }

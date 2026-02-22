@@ -43,6 +43,7 @@ export class CreateMap {
     beforeRenderUpdate() {
         this.deltaTime = this.scene.getEngine().getDeltaTime() / 1000.0;
         this.player.beforeRenderUpdate()
+        this.isPlayerOob()
         this.mapBeforeRenderUpdate()
     }
     
@@ -65,6 +66,12 @@ export class CreateMap {
     
     startRender() {
         this.engine.runRenderLoop(() => this.scene.render());
+    }
+    
+    isPlayerOob(){
+        if(this.player.player.position.y < -20){
+            this.player.respawn()
+        }
     }
     
     changeSceneBackground(scene){}

@@ -25,12 +25,6 @@ export class Map2 extends CreateMap {
     changeSceneBackground(scene) {
         scene.ambientColor = new BABYLON.Color3(0.25, 0.25, 0.3);
         scene.clearColor = new BABYLON.Color4(0.02, 0.1, 0.1, 0.5);
-        // BABYLON.ImportMeshAsync("lightbluesky.glb").then((result) => {
-        //     result.meshes.forEach(mesh => {
-        //         mesh.infiniteDistance = true;
-        //         mesh.checkCollisions = false;
-        //     });
-        // });
     }
 
     mapBeforeRenderUpdate() {
@@ -58,11 +52,10 @@ export class Map2 extends CreateMap {
         }
 
         const newPos = this.ship.position.add(new BABYLON.Vector3(move, 0, 0));
+        const newPos3 = this.ship3.position.add(new BABYLON.Vector3(0, move, 0));
 
-        this.platformAggregate.body.setTargetTransform(
-            newPos,
-            this.ship.rotationQuaternion || BABYLON.Quaternion.Identity()
-        );
+        this.platformAggregate.body.setTargetTransform(newPos, this.ship.rotationQuaternion || BABYLON.Quaternion.Identity());
+        this.platformAggregate3.body.setTargetTransform(newPos3, this.ship3.rotationQuaternion || BABYLON.Quaternion.Identity());
 
     }
 
@@ -85,6 +78,12 @@ export class Map2 extends CreateMap {
         this.box.material = new BABYLON.StandardMaterial("boxMat", this.scene);
         this.box.position = new BABYLON.Vector3(3, 30, -10);
         const boxAggregate = new BABYLON.PhysicsAggregate(this.box, BABYLON.PhysicsShapeType.BOX, { mass: 50.25, friction: 0.75, restitution: 0 }, this.scene);
+        this.box.metadata = {
+            isInteractable: true,
+            onInteract: () => {
+                console.log("interacting with box");
+            }
+        };
     }
 
     createGround(scene) {
@@ -150,15 +149,17 @@ export class Map2 extends CreateMap {
         ship2.rotate(BABYLON.Vector3.Left(), 2.5)
         addStaticPhysics(ship2, "BOX")
 
-        const ship3 = BABYLON.MeshBuilder.CreateBox(
+
+        this.ship3 = BABYLON.MeshBuilder.CreateBox(
             "ship3",
             { width: 6, height: 2, depth: 10 },
             scene
         );
-        ship3.position = new BABYLON.Vector3(5, 1, -18);
-        ship3.material = ruinMat;
-        ship3.rotate(BABYLON.Vector3.Left(), 2)
-        addStaticPhysics(ship3, "BOX")
+        this.ship3.position = new BABYLON.Vector3(5, 1, -18);
+        this.ship3.material = ruinMat;
+        this.ship3.rotate(BABYLON.Vector3.Left(), 2)
+        this.platformAggregate3 = new BABYLON.PhysicsAggregate(this.ship3, BABYLON.PhysicsShapeType.BOX, { mass: 0, friction: 0.7, restitution: 0.2 }, this.scene);
+        this.platformAggregate3.body.setMotionType(BABYLON.PhysicsMotionType.ANIMATED);
 
         // Arche / pylônes simplifiés
         makeBlock("pillar1", 3, new BABYLON.Vector3(12, 1.5, 8));
