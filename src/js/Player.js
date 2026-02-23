@@ -12,6 +12,8 @@ export class Player {
         this.jumpBufferTimer = 0;
         this.velocity = BABYLON.Vector3.Zero();
         this.inheritedVelocity = BABYLON.Vector3.Zero();
+        this.heldMesh = null;
+        this.isHoldingMesh = false;
 
         this.scene = scene;
         this.canvas = canvas;
@@ -75,6 +77,9 @@ export class Player {
 
         this.camera.parent = this.head;
 
+        this.hand = new BABYLON.TransformNode("hand", this.scene);
+        this.hand.parent = this.camera;
+        this.hand.position = new BABYLON.Vector3(0, 0, 3);
 
         // // // // temp camera pour debug commenter la ligne au dessus aussi
         // this.camera.attachControl(this.canvas);
@@ -110,11 +115,12 @@ export class Player {
             this.updatePickRayPos();
             this.checkHit();
         }
+        this.updateHeldMeshPos();
         this.stateMachine.update();
 
         // debug
         if (this.input.justPressed["KeyP"]) {
-            this.stateMachine.currentState.nextState = this.stateMachine.states.other
+            // this.stateMachine.currentState.nextState = this.stateMachine.states.other
             // console.log(this.player._position)
             // console.log(this.input.inputMap)
             // this.respawn()
@@ -150,16 +156,15 @@ export class Player {
         // apply movement
         if (this.isGrounded) {
             if (move.length() > 0) {
-                this.camera.fov = BABYLON.Lerp(this.camera.fov, this.fov, this.deltaTime * 5.0);
                 this.velocity.x = move.x * this.speed;
                 this.velocity.z = move.z * this.speed;
             }
             else {
-                this.camera.fov = BABYLON.Lerp(this.camera.fov, this.BASE_FOV, this.deltaTime * 5.0);
                 this.velocity.x = 0;
                 this.velocity.z = 0;
                 this.isSprinting = false;
             }
+            this.lerpCameraTo(this.fov)
             this.velocity.addInPlace(this.supportInfo.averageSurfaceVelocity);
         }
         else if (this.isSprinting) {
@@ -243,14 +248,15 @@ export class Player {
         }
     }
 
+    updatePickRayPos() {
+        this.camera.getForwardRayToRef(this.pickRay, this.pickRay.length);
+        this.pickRay.origin.copyFrom(this.head.getAbsolutePosition());
+    }
+
     checkHit() {
-        let predicate = function (mesh) {
-            return mesh.metadata?.isInteractable === true;
-        }
+        const pickInfo = this.scene.pickWithRay(this.pickRay);
 
-        const pickInfo = this.scene.pickWithRay(this.pickRay, predicate);
-
-        if (pickInfo.hit) {
+        if (pickInfo.hit && pickInfo.pickedMesh.metadata?.isInteractable) {
             crosshair.style.display = 'block';
             if (pickInfo.pickedMesh.metadata?.onInteract && this.input.justPressed["KeyE"]) {
                 pickInfo.pickedMesh.metadata.onInteract();
@@ -260,13 +266,29 @@ export class Player {
         }
     }
 
-    updatePickRayPos() {
-        this.camera.getForwardRayToRef(this.pickRay, this.pickRay.length);
-        this.pickRay.origin.copyFrom(this.head.getAbsolutePosition());
+    updateHeldMeshPos() {
+        if (this.heldMesh) {
+            crosshair.style.display = 'none';
+            const aggregate = this.heldMesh.metadata.boxAggregate;
+            aggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
+            aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(20));
+
+            if (this.input.justPressed["KeyE"] && this.isHoldingMesh) {
+                aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(4));
+                this.heldMesh = null;
+                this.isHoldingMesh = false;
+                return;
+            }
+            this.isHoldingMesh = true;
+        }
     }
 
     respawn() {
         this.character.setPosition(this.respawnPos);
         this.velocity = BABYLON.Vector3.Zero()
+    }
+
+    lerpCameraTo(fov) {
+        this.camera.fov = BABYLON.Lerp(this.camera.fov, fov, this.deltaTime * 5.0);
     }
 }

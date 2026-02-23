@@ -14,12 +14,14 @@ export class OtherState extends State {
 
     enter() {
         console.log("Enter Other");
+        this.player.isSprinting = false
     }
 
     update() {
         if (this.player.input.justPressed["KeyO"]) {
             this.player.stateMachine.currentState.nextState = this.standState
         }
+        this.player.lerpCameraTo(this.player.BASE_FOV);
     }
 
     exit() {

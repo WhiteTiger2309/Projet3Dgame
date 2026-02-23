@@ -56,7 +56,6 @@ export class Map2 extends CreateMap {
 
         this.platformAggregate.body.setTargetTransform(newPos, this.ship.rotationQuaternion || BABYLON.Quaternion.Identity());
         this.platformAggregate3.body.setTargetTransform(newPos3, this.ship3.rotationQuaternion || BABYLON.Quaternion.Identity());
-
     }
 
     createDuck() {
@@ -76,12 +75,15 @@ export class Map2 extends CreateMap {
     createBox() {
         this.box = BABYLON.MeshBuilder.CreateBox("box", { width: 1, depth: 1, height: 1 }, this.scene);
         this.box.material = new BABYLON.StandardMaterial("boxMat", this.scene);
-        this.box.position = new BABYLON.Vector3(3, 30, -10);
+        this.box.position = new BABYLON.Vector3(3, 5, -10);
         const boxAggregate = new BABYLON.PhysicsAggregate(this.box, BABYLON.PhysicsShapeType.BOX, { mass: 50.25, friction: 0.75, restitution: 0 }, this.scene);
         this.box.metadata = {
+            boxAggregate: boxAggregate,
             isInteractable: true,
             onInteract: () => {
-                console.log("interacting with box");
+                if (!this.player.heldMesh) {
+                    this.player.heldMesh = this.box;
+                }
             }
         };
     }
