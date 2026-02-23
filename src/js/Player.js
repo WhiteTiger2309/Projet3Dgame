@@ -1,29 +1,39 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { PlayerInput } from "./PlayerInput.js";
+import { StateMachine } from "./playerStates/StateMachine.js";
 
 export class Player {
 
     constructor(scene, canvas, map, respawnPos, SPAWN_ROTATION) {
         this.isGrounded = false;
+        this.isSprinting = false;
         this.groundDisableTimer = 0;
         this.jumpBufferTimer = 0;
-        
         this.velocity = BABYLON.Vector3.Zero();
         this.inheritedVelocity = BABYLON.Vector3.Zero();
 
         this.scene = scene;
         this.canvas = canvas;
         this.map = map;
+
+        this.stateMachine = new StateMachine(this)
+
         this.GRAVITY = this.map.scene._physicsEngine.gravity;
 
-        this.SPEED = 5.7;
+        this.WALK_SPEED = 4.5;
+        this.SPRINT_SPEED = 5.7;
         this.JUMP_FORCE = 4.7;
         this.SENSITIVITY = 0.0008;
         this.MAX_SLOPE_ANGLE = 60;
+        this.BASE_FOV = 1.1
+        this.SPRINT_FOV = 1.3
 
         this.GROUND_DISABLE_TIME = 0.1;
         this.JUMP_BUFFER_TIME = 0.15;
+
+        this.speed = this.WALK_SPEED;
+        this.fov = this.BASE_FOV
 
         this.createPlayer(respawnPos, SPAWN_ROTATION)
         this.cameraRotation()
@@ -59,7 +69,7 @@ export class Player {
 
         this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero(), this.scene);
         this.camera.minZ = 0.1;
-        this.camera.fov = 1.1
+        this.camera.fov = this.fov
 
         this.pickRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero(), 4);
 
@@ -79,7 +89,7 @@ export class Player {
 
     cameraRotation() {
         this.scene.onPointerObservable.add((pointerInfo) => {
-            if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE && this.scene.alreadyLocked) {
+            if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE && this.scene.alreadyLocked && this.stateMachine.checkIfCanMove()) {
                 const event = pointerInfo.event;
 
                 this.head.rotation.y += event.movementX * this.SENSITIVITY;
@@ -93,16 +103,21 @@ export class Player {
     // fonction appelé à chaque frame
     beforeRenderUpdate() {
         this.deltaTime = this.map.deltaTime;
-        this.updateGrounded();
-        this.applyGravity();
-        this.updateFromControls();
-        this.updatePickRayPos();
-        this.checkHit();
+        if (this.stateMachine.checkIfCanMove()) {
+            this.updateGrounded();
+            this.applyGravity();
+            this.updateFromControls();
+            this.updatePickRayPos();
+            this.checkHit();
+        }
+        this.stateMachine.update();
 
         // debug
         if (this.input.justPressed["KeyP"]) {
+            this.stateMachine.currentState.nextState = this.stateMachine.states.other
             // console.log(this.player._position)
-            this.respawn()
+            // console.log(this.input.inputMap)
+            // this.respawn()
             // console.log(this.velocity.z);
         }
     }
@@ -132,42 +147,32 @@ export class Player {
 
         move = this.applyRampModification(move)
 
-        // jump
-        if (this.input.justPressed["Space"]) {
-            this.jumpBufferTimer = this.JUMP_BUFFER_TIME;
-        }
-        if (this.jumpBufferTimer > 0) {
-            this.jumpBufferTimer -= this.deltaTime;
-        }
-        if (this.jumpBufferTimer > 0 && this.isGrounded) {
-            this.inheritedVelocity.copyFrom(this.supportInfo.averageSurfaceVelocity);
-            this.velocity.addInPlace(this.inheritedVelocity);
-
-            this.velocity.y += this.JUMP_FORCE;
-            this.isGrounded = false;
-            this.groundDisableTimer = this.GROUND_DISABLE_TIME;
-            this.jumpBufferTimer = 0;
-        }
-
         // apply movement
         if (this.isGrounded) {
             if (move.length() > 0) {
-                this.velocity.x = move.x * this.SPEED;
-                this.velocity.z = move.z * this.SPEED;
+                this.camera.fov = BABYLON.Lerp(this.camera.fov, this.fov, this.deltaTime * 5.0);
+                this.velocity.x = move.x * this.speed;
+                this.velocity.z = move.z * this.speed;
             }
             else {
+                this.camera.fov = BABYLON.Lerp(this.camera.fov, this.BASE_FOV, this.deltaTime * 5.0);
                 this.velocity.x = 0;
                 this.velocity.z = 0;
+                this.isSprinting = false;
             }
             this.velocity.addInPlace(this.supportInfo.averageSurfaceVelocity);
         }
+        else if (this.isSprinting) {
+            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 2);
+            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.speed, this.deltaTime * 2);
+        }
         else if (move.length() > 0) {
-            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.SPEED, this.deltaTime * 3);
-            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.SPEED, this.deltaTime * 3);
+            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 3);
+            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.speed, this.deltaTime * 3);
         }
         else {
-            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.SPEED, this.deltaTime * 10);
-            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.SPEED, this.deltaTime * 10);
+            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 10);
+            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.speed, this.deltaTime * 10);
         }
 
         this.character.moveWithCollisions(this.velocity.scale(this.deltaTime));
@@ -183,7 +188,7 @@ export class Player {
 
             if (this.isGrounded && angleDeg < this.MAX_SLOPE_ANGLE) {
                 if (move.y < 0) {
-                    this.velocity.y += move.y * this.SPEED;
+                    this.velocity.y += move.y * this.speed;
                 }
                 else {
                     const xzLength = Math.sqrt(move.x * move.x + move.z * move.z);
