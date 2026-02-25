@@ -77,9 +77,6 @@ export class Player {
 
         this.camera.parent = this.head;
 
-        this.hand = new BABYLON.TransformNode("hand", this.scene);
-        this.hand.parent = this.camera;
-        this.hand.position = new BABYLON.Vector3(0, 0, 3);
 
         // // // // temp camera pour debug commenter la ligne au dessus aussi
         // this.camera.attachControl(this.canvas);
@@ -90,6 +87,12 @@ export class Player {
         // this.camera.inertia = 0.7;
         // var rayHelper = new BABYLON.RayHelper(this.pickRay);
         // rayHelper.show(this.scene);
+        // // // //
+
+
+        this.hand = new BABYLON.TransformNode("hand", this.scene);
+        this.hand.parent = this.camera;
+        this.hand.position = new BABYLON.Vector3(0, 0, 3);
     }
 
     cameraRotation() {
@@ -120,8 +123,9 @@ export class Player {
 
         // debug
         if (this.input.justPressed["KeyP"]) {
+            // console.log(this.character._position)
             // this.stateMachine.currentState.nextState = this.stateMachine.states.other
-            // console.log(this.player._position)
+            console.log(this.player._position)
             // console.log(this.input.inputMap)
             // this.respawn()
             // console.log(this.velocity.z);

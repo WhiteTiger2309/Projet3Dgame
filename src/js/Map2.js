@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics } from './utils/utils.js';
+import { addStaticPhysics, createButton, addTriggerObservable } from './utils/utils.js';
 
 export class Map2 extends CreateMap {
     constructor(canvas, engine, havokPlugin) {
@@ -20,6 +20,8 @@ export class Map2 extends CreateMap {
         this.createSimpleRuins(this.scene);
         this.createBox()
         this.createDuck()
+        this.createBridgeButton()
+        addTriggerObservable(this.havokPlugin)
     }
 
     changeSceneBackground(scene) {
@@ -70,6 +72,16 @@ export class Map2 extends CreateMap {
                 }
             });
         });
+    }
+
+    createBridgeButton() {
+        const func1 = function () {
+            console.log("activé")
+        }
+        const func2 = function () {
+            console.log("désactivé")
+        }
+        createButton(new BABYLON.Vector3(3, 0.1, -8), func1, func2, this.scene)
     }
 
     createBox() {

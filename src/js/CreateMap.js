@@ -39,42 +39,42 @@ export class CreateMap {
 
         this.scene.clearColor = new BABYLON.Color3(0.8, 0.9, 1.0);
     }
-    
+
     beforeRenderUpdate() {
         this.deltaTime = this.scene.getEngine().getDeltaTime() / 1000.0;
         this.player.beforeRenderUpdate()
         this.isPlayerOob()
         this.mapBeforeRenderUpdate()
     }
-    
+
     createPlayer(PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
         this.player = new Player(this.scene, this.canvas, this, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION)
     }
-    
+
     modifySettings(scene, canvas) {
         scene.onPointerDown = () => {
             if (!scene.alreadyLocked) {
                 canvas.requestPointerLock();
             }
         };
-        
+
         document.addEventListener("pointerlockchange", () => {
             const element = document.pointerLockElement || null;
             scene.alreadyLocked = !!element;
         });
     }
-    
+
     startRender() {
         this.engine.runRenderLoop(() => this.scene.render());
     }
-    
-    isPlayerOob(){
-        if(this.player.player.position.y < -20){
+
+    isPlayerOob() {
+        if (this.player.player.position.y < -20) {
             this.player.respawn()
         }
     }
-    
-    changeSceneBackground(scene){}
-    mapBeforeRenderUpdate() {}
+
+    changeSceneBackground(scene) { }
+    mapBeforeRenderUpdate() { }
 
 }
