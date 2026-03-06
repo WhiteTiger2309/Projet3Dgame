@@ -16,8 +16,10 @@ export class Map2 extends CreateMap {
     }
 
     createMap() {
+        this.createSkyAboveGround(this.scene);
         this.createGround(this.scene);
         this.createSimpleRuins(this.scene);
+        this.createBeaconFx(this.scene);
         this.createBox()
         this.createDuck()
         this.createBridgeButton()
@@ -108,13 +110,83 @@ export class Map2 extends CreateMap {
         );
 
         const mat = new BABYLON.StandardMaterial("groundMat", scene);
-        mat.diffuseColor = new BABYLON.Color3(0.12, 0.12, 0.14);
+        mat.diffuseTexture = new BABYLON.Texture("/assets/terrain/asphalt_01.jpg", scene);
+        mat.diffuseTexture.uScale = 28;
+        mat.diffuseTexture.vScale = 28;
+        mat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
         mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
         ground.material = mat;
 
+        // Ground visuel
         addStaticPhysics(ground, "BOX")
 
+        // Collider volumique invisible (plus fiable pour empêcher la traversée)
+        const groundCollider = BABYLON.MeshBuilder.CreateBox(
+            "groundCollider",
+            { width: 250, depth: 250, height: 6 },
+            scene
+        );
+        groundCollider.position.y = -3;
+        groundCollider.isVisible = false;
+        groundCollider.isPickable = false;
+        addStaticPhysics(groundCollider, "BOX");
+
         return ground;
+    }
+
+    createSkyAboveGround(scene) {
+        const sky = BABYLON.MeshBuilder.CreateSphere(
+            "spaceSkyAbove",
+            { diameter: 900, segments: 48, slice: 0.5, sideOrientation: BABYLON.Mesh.BACKSIDE },
+            scene
+        );
+        sky.position = new BABYLON.Vector3(0, -20, 0);
+        sky.isPickable = false;
+
+        const skyMat = new BABYLON.StandardMaterial("spaceSkyAboveMat", scene);
+        skyMat.diffuseTexture = new BABYLON.Texture("/assets/space/space1.png", scene);
+        skyMat.diffuseTexture.uScale = 1;
+        skyMat.diffuseTexture.vScale = 1;
+        skyMat.emissiveTexture = skyMat.diffuseTexture;
+        skyMat.disableLighting = true;
+        skyMat.backFaceCulling = false;
+        sky.material = skyMat;
+    }
+
+    createBeaconFx(scene) {
+        const beacon = BABYLON.MeshBuilder.CreatePlane("beacon_fx", { width: 3, height: 4.5 }, scene);
+        beacon.position = new BABYLON.Vector3(0, 2.2, 10);
+
+        const fireMat = new BABYLON.StandardMaterial("beacon_fx_mat", scene);
+        fireMat.diffuseTexture = new BABYLON.Texture("/assets/fx/fire.jpg", scene);
+        fireMat.diffuseTexture.hasAlpha = true;
+        fireMat.opacityTexture = fireMat.diffuseTexture;
+        fireMat.emissiveColor = new BABYLON.Color3(0.9, 0.45, 0.1);
+        fireMat.backFaceCulling = false;
+        beacon.material = fireMat;
+        beacon.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+
+        const beaconLight = new BABYLON.PointLight("beacon_fx_light", new BABYLON.Vector3(0, 2.8, 10), scene);
+        beaconLight.diffuse = new BABYLON.Color3(1.0, 0.5, 0.2);
+        beaconLight.intensity = 3.0;
+        beaconLight.range = 18;
+
+        const particles = new BABYLON.ParticleSystem("beacon_fx_particles", 300, scene);
+        particles.particleTexture = new BABYLON.Texture("/assets/fx/flare.png", scene);
+        particles.emitter = new BABYLON.Vector3(0, 0.5, 10);
+        particles.minSize = 0.15;
+        particles.maxSize = 0.5;
+        particles.minLifeTime = 0.25;
+        particles.maxLifeTime = 0.9;
+        particles.emitRate = 100;
+        particles.gravity = new BABYLON.Vector3(0, 2, 0);
+        particles.direction1 = new BABYLON.Vector3(-0.35, 1, -0.35);
+        particles.direction2 = new BABYLON.Vector3(0.35, 1.6, 0.35);
+        particles.color1 = new BABYLON.Color4(1, 0.65, 0.25, 0.9);
+        particles.color2 = new BABYLON.Color4(1, 0.35, 0.1, 0.7);
+        particles.colorDead = new BABYLON.Color4(0.2, 0.2, 0.2, 0);
+        particles.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+        particles.start();
     }
 
     createSimpleRuins(scene) {
