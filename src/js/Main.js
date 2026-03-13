@@ -1,6 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 import HavokPhysics from "@babylonjs/havok";
 import '@babylonjs/loaders'
+import { Map } from './Map.js';
 import { Map2 } from './Map2.js';
 import { Map3 } from './Map3.js';
 
@@ -27,7 +28,8 @@ export class Main {
     }
 
     startGame(canvas, engine, havokPlugin) {
-        new Map2(canvas, engine, havokPlugin)
+        new Map(canvas, engine, havokPlugin)
+        // new Map2(canvas, engine, havokPlugin)
         // new Map3(canvas, engine, havokPlugin)
     }
 

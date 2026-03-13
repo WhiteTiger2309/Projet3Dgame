@@ -301,7 +301,7 @@ export class Player {
 
     applyCeilingHitModification() {
         if (!this.isGrounded && this.velocity.y > 0.1) {
-            if (this.lastY == this.character._position.y) {
+            if (Math.abs(this.lastY - this.character._position.y) < 0.001) {
                 this.lastYCounter += 1
             }
             else {
