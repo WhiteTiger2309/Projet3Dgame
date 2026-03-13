@@ -14,6 +14,8 @@ export class Player {
         this.inheritedVelocity = BABYLON.Vector3.Zero();
         this.heldMesh = null;
         this.isHoldingMesh = false;
+        this.lastY = 0
+        this.lastYCounter = 0
 
         this.scene = scene;
         this.canvas = canvas;
@@ -125,10 +127,10 @@ export class Player {
         if (this.input.justPressed["KeyP"]) {
             // console.log(this.character._position)
             // this.stateMachine.currentState.nextState = this.stateMachine.states.other
-            console.log(this.player._position)
+            console.log(this.character._position.y)
             // console.log(this.input.inputMap)
             // this.respawn()
-            // console.log(this.velocity.z);
+            // console.log(this.velocity.y);
         }
     }
 
@@ -156,6 +158,7 @@ export class Player {
         }
 
         move = this.applyRampModification(move)
+        this.applyCeilingHitModification();
 
         // apply movement
         if (this.isGrounded) {
@@ -294,5 +297,20 @@ export class Player {
 
     lerpCameraTo(fov) {
         this.camera.fov = BABYLON.Lerp(this.camera.fov, fov, this.deltaTime * 5.0);
+    }
+
+    applyCeilingHitModification() {
+        if (!this.isGrounded && this.velocity.y > 0.1) {
+            if (this.lastY == this.character._position.y) {
+                this.lastYCounter += 1
+            }
+            else {
+                this.lastYCounter = 0
+            }
+            if (this.lastYCounter >= 2) {
+                this.velocity.y = 0
+            }
+            this.lastY = this.character._position.y
+        }
     }
 }

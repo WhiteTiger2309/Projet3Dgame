@@ -120,17 +120,6 @@ export class Map2 extends CreateMap {
         // Ground visuel
         addStaticPhysics(ground, "BOX")
 
-        // Collider volumique invisible (plus fiable pour empêcher la traversée)
-        const groundCollider = BABYLON.MeshBuilder.CreateBox(
-            "groundCollider",
-            { width: 250, depth: 250, height: 6 },
-            scene
-        );
-        groundCollider.position.y = -3;
-        groundCollider.isVisible = false;
-        groundCollider.isPickable = false;
-        addStaticPhysics(groundCollider, "BOX");
-
         return ground;
     }
 
