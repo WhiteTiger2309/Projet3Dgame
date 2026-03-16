@@ -25,3 +25,31 @@ html, body {
     transform: translate(-50%, -50%);
     pointer-events: none;
 }
+	
+#respawnOverlay {
+	position: fixed;
+	inset: 0;
+	background: black;
+	opacity: 0;
+	pointer-events: none;
+}
+
+@keyframes respawnFadeOut {
+	0%   { opacity: 0; }
+	80%  { opacity: 100; }
+	100% { opacity: 100; }
+}
+
+@keyframes respawnFadeIn {
+	0%   { opacity: 100; }
+	20%  { opacity: 100; }
+	100% { opacity: 0; }
+}
+
+#respawnOverlay.fade-out {
+    animation: respawnFadeOut 0.5s normal ;
+}
+
+#respawnOverlay.fade-in {
+    animation: respawnFadeIn 0.5s normal;
+}

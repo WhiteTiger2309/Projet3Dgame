@@ -8,6 +8,7 @@ export class Player {
     constructor(scene, canvas, map, respawnPos, SPAWN_ROTATION) {
         this.isGrounded = false;
         this.isSprinting = false;
+        this.respawning = false
         this.groundDisableTimer = 0;
         this.jumpBufferTimer = 0;
         this.velocity = BABYLON.Vector3.Zero();
@@ -68,6 +69,7 @@ export class Player {
         if (SPAWN_ROTATION == undefined) {
             SPAWN_ROTATION = BABYLON.Vector3.Zero();
         }
+        this.SPAWN_ROTATION = SPAWN_ROTATION;
         this.head.rotation.copyFrom(SPAWN_ROTATION);
         this.head.parent = this.player;
 
@@ -118,7 +120,8 @@ export class Player {
             this.applyGravity();
             this.updateFromControls();
             this.updatePickRayPos();
-            this.checkHit();
+            this.checkPickRayHit();
+            this.updateHandPos();
         }
         this.updateHeldMeshPos();
         this.stateMachine.update();
@@ -127,9 +130,9 @@ export class Player {
         if (this.input.justPressed["KeyP"]) {
             // console.log(this.character._position)
             // this.stateMachine.currentState.nextState = this.stateMachine.states.other
-            console.log(this.character._position.y)
+            // console.log(this.character._position.y)
             // console.log(this.input.inputMap)
-            // this.respawn()
+            this.respawn()
             // console.log(this.velocity.y);
         }
     }
@@ -260,7 +263,7 @@ export class Player {
         this.pickRay.origin.copyFrom(this.head.getAbsolutePosition());
     }
 
-    checkHit() {
+    checkPickRayHit() {
         const pickInfo = this.scene.pickWithRay(this.pickRay);
 
         if (pickInfo.hit && pickInfo.pickedMesh.metadata?.isInteractable) {
@@ -273,6 +276,21 @@ export class Player {
         }
     }
 
+    // à faire empecher le joueur de sauter sur l'objet tenu
+    updateHandPos() {
+        if (this.heldMesh) {
+            const pickInfo = this.scene.pickWithRay(this.pickRay, (mesh) => {
+                return !(mesh === this.heldMesh);
+            });
+            if (pickInfo.hit) {
+                this.hand.position.z = Math.max(pickInfo.distance - 0.5, 1)
+            }
+            else {
+                this.hand.position.z = 3
+            }
+        }
+    }
+
     updateHeldMeshPos() {
         if (this.heldMesh) {
             crosshair.style.display = 'none';
@@ -281,18 +299,52 @@ export class Player {
             aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(20));
 
             if (this.input.justPressed["KeyE"] && this.isHoldingMesh) {
-                aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(4));
-                this.heldMesh = null;
-                this.isHoldingMesh = false;
+                this.dropHeldMesh(aggregate);
                 return;
             }
             this.isHoldingMesh = true;
         }
     }
 
+    dropHeldMesh(aggregate) {
+        if (this.heldMesh) {
+            if (aggregate == undefined) {
+                aggregate = this.heldMesh.metadata.boxAggregate;
+            }
+            aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(2));
+            this.heldMesh = null;
+            this.isHoldingMesh = false;
+        }
+    }
+
     respawn() {
-        this.character.setPosition(this.respawnPos);
-        this.velocity = BABYLON.Vector3.Zero()
+        if (!this.respawning) {
+            this.respawning = true
+            respawnOverlay.classList.add("fade-out");
+            const fadeOutHandler = () => {
+                respawnOverlay.removeEventListener("animationend", fadeOutHandler);
+
+                this.dropHeldMesh();
+                this.character.setPosition(this.respawnPos);
+                this.velocity = BABYLON.Vector3.Zero();
+                this.head.rotation.copyFrom(this.SPAWN_ROTATION);
+                this.camera.rotation.x = 0;
+
+                respawnOverlay.classList.remove("fade-out");
+                respawnOverlay.classList.add("fade-in");
+
+                const fadeInHandler = () => {
+                    respawnOverlay.removeEventListener("animationend", fadeInHandler);
+
+                    respawnOverlay.classList.remove("fade-in");
+                    this.respawning = false;
+                };
+
+                respawnOverlay.addEventListener("animationend", fadeInHandler);
+            };
+
+            respawnOverlay.addEventListener("animationend", fadeOutHandler);
+        }
     }
 
     lerpCameraTo(fov) {
