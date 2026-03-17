@@ -127,7 +127,7 @@ export class Player {
         this.stateMachine.update();
 
         // debug
-        if (this.input.justPressed["KeyP"]) {
+        if (this.input.justPressed["debug"]) {
             // console.log(this.character._position)
             // this.stateMachine.currentState.nextState = this.stateMachine.states.other
             // console.log(this.character._position.y)
@@ -268,7 +268,7 @@ export class Player {
 
         if (pickInfo.hit && pickInfo.pickedMesh.metadata?.isInteractable) {
             crosshair.style.display = 'block';
-            if (pickInfo.pickedMesh.metadata?.onInteract && this.input.justPressed["KeyE"]) {
+            if (pickInfo.pickedMesh.metadata?.onInteract && this.input.justPressed["interact"]) {
                 pickInfo.pickedMesh.metadata.onInteract();
             }
         } else {
@@ -280,7 +280,7 @@ export class Player {
     updateHandPos() {
         if (this.heldMesh) {
             const pickInfo = this.scene.pickWithRay(this.pickRay, (mesh) => {
-                return !(mesh === this.heldMesh);
+                return !(mesh === this.heldMesh); // ou si physics
             });
             if (pickInfo.hit) {
                 this.hand.position.z = Math.max(pickInfo.distance - 0.5, 1)
@@ -298,7 +298,7 @@ export class Player {
             aggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
             aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(20));
 
-            if (this.input.justPressed["KeyE"] && this.isHoldingMesh) {
+            if (this.input.justPressed["interact"] && this.isHoldingMesh) {
                 this.dropHeldMesh(aggregate);
                 return;
             }
