@@ -49,7 +49,7 @@ export class Player {
 
     createPlayer(respawnPos, SPAWN_ROTATION) {
         let playerHeight = 1.8;
-        let playerWidth = 1;
+        let playerWidth = 0.7;
         if (respawnPos == undefined) {
             respawnPos = new BABYLON.Vector3(0, 3, 0)
         }
@@ -116,8 +116,8 @@ export class Player {
     beforeRenderUpdate() {
         this.deltaTime = this.map.deltaTime;
         if (this.stateMachine.checkIfCanMove()) {
-            this.updateGrounded();
             this.applyGravity();
+            this.updateGrounded();
             this.updateFromControls();
             this.updatePickRayPos();
             this.checkPickRayHit();
@@ -129,10 +129,12 @@ export class Player {
         // debug
         if (this.input.justPressed["debug"]) {
             // console.log(this.character._position)
+            // console.log(this.camera.rotation.x)
             // this.stateMachine.currentState.nextState = this.stateMachine.states.other
             // console.log(this.character._position.y)
             // console.log(this.input.inputMap)
             this.respawn()
+            // console.log(this.map.box.position);
             // console.log(this.velocity.y);
         }
     }

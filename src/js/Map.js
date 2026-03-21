@@ -5,8 +5,11 @@ import { addStaticPhysics, createButton, addTriggerObservable } from './utils/ut
 
 export class Map extends CreateMap {
     constructor(canvas, engine, havokPlugin) {
-        const PLAYER_SPAWN_POS = new BABYLON.Vector3(3.89, 1, 1)
-        const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 4.3, 0)
+        // const PLAYER_SPAWN_POS = new BABYLON.Vector3(3.89, 1, 1)
+        // const PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 6, 1)
+        // const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 4.3, 0)
+        const PLAYER_SPAWN_POS = new BABYLON.Vector3(-1.6, 1, 10)
+        const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 1.5, 0)
 
         super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION)
 
@@ -19,7 +22,9 @@ export class Map extends CreateMap {
         this.createGround(this.scene);
         this.createSkyAboveGround(this.scene);
         this.createShip(this.scene)
-        this.createBox(new BABYLON.Vector3(-2.28, 1.7, -1.6))
+        this.createPuzzleMap()
+        this.addRobot()
+        this.createBox(new BABYLON.Vector3(-11, 0.7, 0))
     }
 
     // changeSceneBackground(scene) {
@@ -32,23 +37,46 @@ export class Map extends CreateMap {
     }
 
     createGround(scene) {
-        const ground = BABYLON.MeshBuilder.CreateGround(
-            "ground",
-            { width: 250, height: 250, subdivisions: 2 },
-            scene
-        );
-
-        const mat = new BABYLON.StandardMaterial("groundMat", scene);
-        mat.diffuseTexture = new BABYLON.Texture("/assets/terrain/asphalt_01.jpg", scene);
-        mat.diffuseTexture.uScale = 28;
-        mat.diffuseTexture.vScale = 28;
-        mat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
-        mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-        ground.material = mat;
-
-        addStaticPhysics(ground, "BOX")
+        const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 250, height: 250, subdivisions: 2 }, scene);
+        this.addGroundTexture(ground)
+        addStaticPhysics(ground, "BOX");
+        // const groundHMap = BABYLON.MeshBuilder.CreateGroundFromHeightMap("ground", 'images/hmap.png', {
+        //     width: 50,
+        //     height: 50,
+        //     subdivisions: 10,
+        //     minHeight: 0,
+        //     maxHeight: 6,
+        //     onReady: (ground) => {
+        //         this.addGroundTexture(ground);
+        //         addStaticPhysics(ground, "MESH");
+        //     }
+        // }, scene);
 
         // return ground;
+    }
+
+    createPuzzleMap() {
+        BABYLON.ImportMeshAsync("models/testMap.glb").then((result) => {
+            const map = result.meshes[0];
+            map.position.x = -10
+            result.meshes.forEach(mesh => {
+                if (mesh.metadata?.gltf?.extras.collisions) {
+                    mesh.metadata.aggregate = addStaticPhysics(mesh, "MESH")
+                }
+            });
+        });
+    }
+
+    addRobot() {
+        BABYLON.ImportMeshAsync("models/robot.glb").then((result) => {
+            const robot = result.meshes[0];
+            robot.position.z = 10
+            addStaticPhysics(result.meshes[1], "CONVEX_HULL")
+            // const RobotIdle = this.scene.getAnimationGroupByName("RobotIdle")
+            // RobotIdle.stop()
+            // const RobotTalking = this.scene.getAnimationGroupByName("RobotTalking")
+            // RobotTalking.start(true)
+        });
     }
 
     createShip(scene) {
@@ -133,6 +161,16 @@ export class Map extends CreateMap {
         skyMat.disableLighting = true;
         skyMat.backFaceCulling = false;
         sky.material = skyMat;
+    }
+
+    addGroundTexture = (ground) => {
+        const mat = new BABYLON.StandardMaterial("groundMat", this.scene);
+        mat.diffuseTexture = new BABYLON.Texture("/assets/terrain/asphalt_01.jpg", this.scene);
+        mat.diffuseTexture.uScale = 28;
+        mat.diffuseTexture.vScale = 28;
+        mat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
+        mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+        ground.material = mat;
     }
 
 }
