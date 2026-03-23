@@ -9,6 +9,7 @@ export class Player {
         this.isGrounded = false;
         this.isSprinting = false;
         this.respawning = false
+        this.lowFriction = false;
         this.groundDisableTimer = 0;
         this.jumpBufferTimer = 0;
         this.velocity = BABYLON.Vector3.Zero();
@@ -17,6 +18,9 @@ export class Player {
         this.isHoldingMesh = false;
         this.lastY = 0
         this.lastYCounter = 0
+        this.line = BABYLON.MeshBuilder.CreateLines("grapplingHook", { points: [BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero()], updatable: true });
+        this.line.color = new BABYLON.Color3(0, 0, 0);
+        this.grapplingHookTimer = 0;
 
         this.scene = scene;
         this.canvas = canvas;
@@ -36,6 +40,7 @@ export class Player {
 
         this.GROUND_DISABLE_TIME = 0.1;
         this.JUMP_BUFFER_TIME = 0.15;
+        this.GRAPPLING_HOOK_COOLDOWN = 0.3;
 
         this.speed = this.WALK_SPEED;
         this.fov = this.BASE_FOV
@@ -78,6 +83,7 @@ export class Player {
         this.camera.fov = this.fov
 
         this.pickRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero(), 4);
+        this.grapplingHookRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero(), 20);
 
         this.camera.parent = this.head;
 
@@ -89,7 +95,7 @@ export class Player {
         // this.camera.speed = 0.6;
         // this.camera.angularSensibility = 3000;
         // this.camera.inertia = 0.7;
-        // var rayHelper = new BABYLON.RayHelper(this.pickRay);
+        // var rayHelper = new BABYLON.RayHelper(this.grapplingHookRay);
         // rayHelper.show(this.scene);
         // // // //
 
@@ -116,10 +122,11 @@ export class Player {
     beforeRenderUpdate() {
         this.deltaTime = this.map.deltaTime;
         if (this.stateMachine.checkIfCanMove()) {
-            this.applyGravity();
             this.updateGrounded();
+            this.applyGravity();
+            this.grapplingHook();
             this.updateFromControls();
-            this.updatePickRayPos();
+            this.updateRayPos(this.pickRay);
             this.checkPickRayHit();
             this.updateHandPos();
         }
@@ -128,12 +135,12 @@ export class Player {
 
         // debug
         if (this.input.justPressed["debug"]) {
-            // console.log(this.character._position)
+            console.log(this.character._position)
             // console.log(this.camera.rotation.x)
             // this.stateMachine.currentState.nextState = this.stateMachine.states.other
             // console.log(this.character._position.y)
             // console.log(this.input.inputMap)
-            this.respawn()
+            // this.respawn()
             // console.log(this.map.box.position);
             // console.log(this.velocity.y);
         }
@@ -166,15 +173,35 @@ export class Player {
         this.applyCeilingHitModification();
 
         // apply movement
+        const velocityXZ = Math.abs(this.velocity.x) + Math.abs(this.velocity.z)
         if (this.isGrounded) {
             if (move.length() > 0) {
-                this.velocity.x = move.x * this.speed;
-                this.velocity.z = move.z * this.speed;
+                const velocityXZMove = Math.abs(this.velocity.x * move.x) + Math.abs(this.velocity.z * move.z)
+                if (this.lowFriction) {
+                    this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 3);
+                    this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.speed, this.deltaTime * 3);
+                    if (velocityXZMove <= this.speed) {
+                        this.lowFriction = false
+                    }
+                }
+                else {
+                    this.velocity.x = move.x * this.speed;
+                    this.velocity.z = move.z * this.speed;
+                }
             }
             else {
-                this.velocity.x = 0;
-                this.velocity.z = 0;
-                this.isSprinting = false;
+                if (this.lowFriction) {
+                    this.velocity.x = BABYLON.Lerp(this.velocity.x, 0, this.deltaTime * 3);
+                    this.velocity.z = BABYLON.Lerp(this.velocity.z, 0, this.deltaTime * 3);
+                    if (velocityXZ <= 2) {
+                        this.lowFriction = false
+                    }
+                }
+                else {
+                    this.velocity.x = 0;
+                    this.velocity.z = 0;
+                    this.isSprinting = false;
+                }
             }
             this.lerpCameraTo(this.fov)
             this.velocity.addInPlace(this.supportInfo.averageSurfaceVelocity);
@@ -188,8 +215,14 @@ export class Player {
             this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.speed, this.deltaTime * 3);
         }
         else {
-            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 10);
-            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.speed, this.deltaTime * 10);
+            if (this.lowFriction) {
+                this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 2);
+                this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.speed, this.deltaTime * 2);
+            }
+            else {
+                this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 10)
+                this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.speed, this.deltaTime * 10)
+            }
         }
 
         this.character.moveWithCollisions(this.velocity.scale(this.deltaTime));
@@ -235,7 +268,7 @@ export class Player {
     }
 
     applyGravity() {
-        if (!this.isGrounded) {
+        if (!this.isGrounded || this.velocity.y > 0) {
             this.velocity.y += this.GRAVITY.y * this.deltaTime;
         }
         else {
@@ -260,9 +293,9 @@ export class Player {
         }
     }
 
-    updatePickRayPos() {
-        this.camera.getForwardRayToRef(this.pickRay, this.pickRay.length);
-        this.pickRay.origin.copyFrom(this.head.getAbsolutePosition());
+    updateRayPos(ray) {
+        this.camera.getForwardRayToRef(ray, ray.length);
+        ray.origin.copyFrom(this.head.getAbsolutePosition());
     }
 
     checkPickRayHit() {
@@ -319,6 +352,42 @@ export class Player {
         }
     }
 
+    grapplingHook() {
+        if (this.grapplingHookTimer > 0) {
+            this.grapplingHookTimer -= this.deltaTime;
+        }
+        if (this.grapplingHookTimer <= 0) {
+            this.line = BABYLON.MeshBuilder.CreateLines("grapplingHook", { points: [BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero()], updatable: true, instance: this.line });
+            if (this.input.justPressed["mouseLeft"] && !this.isHoldingMesh && this.scene.alreadyLocked) {
+                this.grapplingHookTimer = this.GRAPPLING_HOOK_COOLDOWN;
+                this.updateRayPos(this.grapplingHookRay)
+                this.checkgrapplingHookRayHit(this.grapplingHookRay);
+            }
+        }
+    }
+
+    checkgrapplingHookRayHit(ray) {
+        const pickInfo = this.scene.pickWithRay(ray);
+
+        if (pickInfo.hit) {
+            let temp = this.velocity.clone().addInPlace(pickInfo.ray.direction.scale(30));
+            if (temp.y > 10) {
+                temp.y = 10;
+                this.velocity.copyFrom(temp);
+            }
+            else if (temp.y < -10) {
+                temp.y = -10;
+                this.velocity.copyFrom(temp);
+            }
+            else {
+                this.velocity.addInPlace(pickInfo.ray.direction.scale(30));
+            }
+            this.lowFriction = true
+
+            this.line = BABYLON.MeshBuilder.CreateLines("grapplingHook", { points: [this.character._position, pickInfo.pickedPoint], updatable: true, instance: this.line });
+        }
+    }
+
     respawn() {
         if (!this.respawning) {
             this.respawning = true
@@ -362,6 +431,7 @@ export class Player {
                 this.lastYCounter = 0
             }
             if (this.lastYCounter >= 2) {
+                this.lastYCounter = 0
                 this.velocity.y = 0
             }
             this.lastY = this.character._position.y

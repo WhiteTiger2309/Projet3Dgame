@@ -6,10 +6,10 @@ import { addStaticPhysics, createButton, addTriggerObservable } from './utils/ut
 export class Map extends CreateMap {
     constructor(canvas, engine, havokPlugin) {
         // const PLAYER_SPAWN_POS = new BABYLON.Vector3(3.89, 1, 1)
-        // const PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 6, 1)
-        // const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 4.3, 0)
-        const PLAYER_SPAWN_POS = new BABYLON.Vector3(-1.6, 1, 10)
-        const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 1.5, 0)
+        const PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 6, 1)
+        const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 4.3, 0)
+        // const PLAYER_SPAWN_POS = new BABYLON.Vector3(-1.6, 1, 10)
+        // const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 1.5, 0)
 
         super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION)
 
@@ -71,11 +71,24 @@ export class Map extends CreateMap {
         BABYLON.ImportMeshAsync("models/robot.glb").then((result) => {
             const robot = result.meshes[0];
             robot.position.z = 10
-            addStaticPhysics(result.meshes[1], "CONVEX_HULL")
-            // const RobotIdle = this.scene.getAnimationGroupByName("RobotIdle")
-            // RobotIdle.stop()
-            // const RobotTalking = this.scene.getAnimationGroupByName("RobotTalking")
-            // RobotTalking.start(true)
+            robot.rotationQuaternion = null
+            robot.rotation.y = 1.4
+            result.meshes.forEach(mesh => {
+                if (mesh.metadata?.gltf?.extras.collisions) {
+                    mesh.metadata.aggregate = addStaticPhysics(mesh, "CONVEX_HULL")
+                }
+            });
+            // const RobotFaceIdle = this.scene.getAnimationGroupByName("RobotFaceIdle")
+            // RobotFaceIdle.stop()
+            // // const RobotTalking = this.scene.getAnimationGroupByName("RobotFaceTalking")
+            // // RobotTalking.start(true)
+            const RobotIdle = this.scene.getAnimationGroupByName("RobotIdle")
+            RobotIdle.start(true)
+            // console.log(this.scene.animationGroups)
+
+            // console.log(result)
+            // result.transformNodes[5]._children[0]._rotationQuaternion.y = 0.5
+            // console.log(result.transformNodes[5]._children[0])
         });
     }
 

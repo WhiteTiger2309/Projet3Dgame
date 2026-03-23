@@ -37,6 +37,25 @@ export class PlayerInput {
             this.inputMap[code] = false;
         }));
 
+        scene.onPointerObservable.add((pointerInfo) => {
+            let code = "";
+
+            if (pointerInfo.event.button === 0) code = "mouseLeft";
+            if (pointerInfo.event.button === 1) code = "mouseMiddle";
+            if (pointerInfo.event.button === 2) code = "mouseRight";
+
+            if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+                if (!this.inputMap[code]) {
+                    this.justPressed[code] = true;
+                }
+                this.inputMap[code] = true;
+            }
+
+            if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERUP) {
+                this.inputMap[code] = false;
+            }
+        });
+
         scene.onBeforeRenderObservable.add(() => {
             this.updateFromKeyboard();
             this.clearFrameInput();

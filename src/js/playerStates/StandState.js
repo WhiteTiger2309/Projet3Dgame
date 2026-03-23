@@ -26,8 +26,12 @@ export class StandState extends State {
         if (this.player.jumpBufferTimer > 0 && this.player.isGrounded) {
             this.player.inheritedVelocity.copyFrom(this.player.supportInfo.averageSurfaceVelocity);
             this.player.velocity.addInPlace(this.player.inheritedVelocity);
-
-            this.player.velocity.y += this.player.JUMP_FORCE;
+            if (this.player.velocity.y < 0) {
+                this.player.velocity.y = this.player.JUMP_FORCE;
+            }
+            else {
+                this.player.velocity.y += this.player.JUMP_FORCE;
+            }
             this.player.isGrounded = false;
             this.player.groundDisableTimer = this.player.GROUND_DISABLE_TIME;
             this.player.jumpBufferTimer = 0;
