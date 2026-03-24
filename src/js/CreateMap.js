@@ -65,7 +65,11 @@ export class CreateMap {
     }
 
     startRender() {
-        this.engine.runRenderLoop(() => this.scene.render());
+        this.engine.runRenderLoop(() => {
+            if (window.document.hasFocus()) {
+                this.scene.render();
+            }
+        })
     }
 
     isPlayerOob() {

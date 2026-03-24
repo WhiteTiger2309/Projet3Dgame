@@ -45,8 +45,17 @@ export class Player {
         this.speed = this.WALK_SPEED;
         this.fov = this.BASE_FOV
 
+        this.highlight = new BABYLON.HighlightLayer("highlight", scene);
+        this.highlight.innerGlow = false
+        this.highlight.blurHorizontalSize = 0.8
+        this.highlight.blurVerticalSize = 0.8
+
         this.createPlayer(respawnPos, SPAWN_ROTATION)
         this.cameraRotation()
+
+        this.outliner = new BABYLON.SelectionOutlineLayer("outliner", scene)
+        this.outliner.outlineColor = BABYLON.Color3.White()
+        this.outliner.outlineThickness = 3.0;
 
         this.input = new PlayerInput(scene);
     }
@@ -302,12 +311,16 @@ export class Player {
         const pickInfo = this.scene.pickWithRay(this.pickRay);
 
         if (pickInfo.hit && pickInfo.pickedMesh.metadata?.isInteractable) {
-            crosshair.style.display = 'block';
+            this.highlight.addMesh(pickInfo.pickedMesh, BABYLON.Color3.White());
+            this.outliner.addSelection(pickInfo.pickedMesh);
+
             if (pickInfo.pickedMesh.metadata?.onInteract && this.input.justPressed["interact"]) {
                 pickInfo.pickedMesh.metadata.onInteract();
             }
         } else {
-            crosshair.style.display = 'none';
+            this.highlight.removeAllMeshes()
+            this.outliner.clearSelection();
+
         }
     }
 
@@ -328,7 +341,9 @@ export class Player {
 
     updateHeldMeshPos() {
         if (this.heldMesh) {
-            crosshair.style.display = 'none';
+            this.highlight.removeAllMeshes()
+            this.outliner.clearSelection();
+
             const aggregate = this.heldMesh.metadata.boxAggregate;
             aggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
             aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(20));
@@ -383,6 +398,7 @@ export class Player {
                 this.velocity.addInPlace(pickInfo.ray.direction.scale(30));
             }
             this.lowFriction = true
+            // A FAIRE tester d'enlever une direction x ou z pour regler bug qui bloque hauteur quand contre mur
 
             this.line = BABYLON.MeshBuilder.CreateLines("grapplingHook", { points: [this.character._position, pickInfo.pickedPoint], updatable: true, instance: this.line });
         }
