@@ -17,7 +17,7 @@ export class StandState extends State {
     }
 
     update() {
-        if (this.player.input.justPressed["Space"]) {
+        if (this.player.input.justPressed["jump"]) {
             this.player.jumpBufferTimer = this.player.JUMP_BUFFER_TIME;
         }
         if (this.player.jumpBufferTimer > 0) {
@@ -26,23 +26,27 @@ export class StandState extends State {
         if (this.player.jumpBufferTimer > 0 && this.player.isGrounded) {
             this.player.inheritedVelocity.copyFrom(this.player.supportInfo.averageSurfaceVelocity);
             this.player.velocity.addInPlace(this.player.inheritedVelocity);
-
-            this.player.velocity.y += this.player.JUMP_FORCE;
+            if (this.player.velocity.y < 0) {
+                this.player.velocity.y = this.player.JUMP_FORCE;
+            }
+            else {
+                this.player.velocity.y += this.player.JUMP_FORCE;
+            }
             this.player.isGrounded = false;
             this.player.groundDisableTimer = this.player.GROUND_DISABLE_TIME;
             this.player.jumpBufferTimer = 0;
         }
-        else if (this.player.input.justPressed["CapsLock"] && !this.player.isSprinting && this.player.input.inputMap["KeyW"]) {
+        else if (this.player.input.justPressed["sprint"] && !this.player.isSprinting && this.player.input.inputMap["forward"]) {
             this.player.isSprinting = true;
             this.player.speed = this.player.SPRINT_SPEED;
             this.player.fov = this.player.SPRINT_FOV;
         }
-        else if ((this.player.input.inputMap["KeyA"] || this.player.input.inputMap["KeyD"] || this.player.input.inputMap["KeyS"]) && !this.player.input.inputMap["KeyW"]) {
+        else if ((this.player.input.inputMap["left"] || this.player.input.inputMap["right"] || this.player.input.inputMap["backward"]) && !this.player.input.inputMap["forward"]) {
             this.player.isSprinting = false;
             this.player.speed = this.player.WALK_SPEED;
             this.player.fov = this.player.BASE_FOV;
         }
-        else if (this.player.input.justPressed["CapsLock"] && this.player.isSprinting) {
+        else if (this.player.input.justPressed["sprint"] && this.player.isSprinting) {
             this.player.isSprinting = false;
             this.player.speed = this.player.WALK_SPEED;
             this.player.fov = this.player.BASE_FOV;
