@@ -1,21 +1,28 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createButton, addTriggerObservable } from './utils/utils.js';
+import { addStaticPhysics, createButton, addTriggerObservable, createMapChangeGate } from './utils/utils.js';
+
+import { Map2 } from './Map2.js';
 
 export class Map extends CreateMap {
-    constructor(canvas, engine, havokPlugin) {
+    constructor(canvas, engine, havokPlugin, main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
+        if (PLAYER_SPAWN_POS == undefined) {
+            PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 4.5, 1)
+        }
+        if (PLAYER_SPAWN_ROTATION == undefined) {
+            PLAYER_SPAWN_ROTATION = 4.3
+        }
         // const PLAYER_SPAWN_POS = new BABYLON.Vector3(3.89, 1, 1)
-        const PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 6, 1)
-        const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 4.3, 0)
+        // const PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 4.5, 1)
+        // const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 4.3, 0)
         // const PLAYER_SPAWN_POS = new BABYLON.Vector3(-1.6, 1, 10)
         // const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 1.5, 0)
 
-        super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION)
+        super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main)
 
         this.createMap()
 
-        super.startRender()
     }
 
     createMap() {
@@ -25,12 +32,9 @@ export class Map extends CreateMap {
         this.createPuzzleMap()
         this.addRobot()
         this.createBox(new BABYLON.Vector3(-11, 0.7, 0))
+        createMapChangeGate(Map2,new BABYLON.Vector3(0, 0, -10), new BABYLON.Vector3(0, 3, -10), BABYLON.Tools.ToRadians(180))
+        addTriggerObservable(this.havokPlugin, this.main)
     }
-
-    // changeSceneBackground(scene) {
-    //     scene.ambientColor = new BABYLON.Color3(0.25, 0.25, 0.3);
-    //     scene.clearColor = new BABYLON.Color4(0.02, 0.1, 0.1, 0.5);
-    // }
 
     mapBeforeRenderUpdate() {
 
@@ -40,19 +44,6 @@ export class Map extends CreateMap {
         const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 250, height: 250, subdivisions: 2 }, scene);
         this.addGroundTexture(ground)
         addStaticPhysics(ground, "BOX");
-        // const groundHMap = BABYLON.MeshBuilder.CreateGroundFromHeightMap("ground", 'images/hmap.png', {
-        //     width: 50,
-        //     height: 50,
-        //     subdivisions: 10,
-        //     minHeight: 0,
-        //     maxHeight: 6,
-        //     onReady: (ground) => {
-        //         this.addGroundTexture(ground);
-        //         addStaticPhysics(ground, "MESH");
-        //     }
-        // }, scene);
-
-        // return ground;
     }
 
     createPuzzleMap() {
@@ -120,10 +111,6 @@ export class Map extends CreateMap {
                     }
                 }
             }
-            // const InsideButton2 = insideButton.clone("InsideButton2")
-            // InsideButton2.position.x = 3
-            // InsideButton2.rotationQuaternion = null
-            // InsideButton2.rotation.y = 1.57
         });
     }
 
@@ -147,6 +134,7 @@ export class Map extends CreateMap {
         this.box.metadata = {
             boxAggregate: boxAggregate,
             isInteractable: true,
+            canBeHeld: true,
             onInteract: () => {
                 if (!this.player.heldMesh) {
                     this.player.heldMesh = this.box;

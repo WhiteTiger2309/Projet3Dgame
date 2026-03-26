@@ -33,22 +33,21 @@ html, body {
 	pointer-events: none;
 }
 
-@keyframes respawnFadeOut {
+@keyframes respawnFadeIn {
 	0%   { opacity: 0; }
-	80%  { opacity: 100; }
 	100% { opacity: 100; }
 }
 
-@keyframes respawnFadeIn {
+@keyframes respawnFadeOut {
 	0%   { opacity: 100; }
-	20%  { opacity: 100; }
+	30%  { opacity: 100; }
 	100% { opacity: 0; }
-}
-
-#respawnOverlay.fade-out {
-    animation: respawnFadeOut 0.5s normal ;
 }
 
 #respawnOverlay.fade-in {
     animation: respawnFadeIn 0.5s normal;
+}
+
+#respawnOverlay.fade-out {
+    animation: respawnFadeOut 0.8s normal;
 }

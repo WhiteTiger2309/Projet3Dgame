@@ -3,10 +3,11 @@ import * as BABYLON from '@babylonjs/core'
 import { Player } from './Player.js';
 
 export class CreateMap {
-    constructor(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
+    constructor(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main) {
         this.engine = engine;
         this.canvas = canvas;
         this.havokPlugin = havokPlugin;
+        this.main = main
 
         this.scene = this.createScene()
         this.createLights(this.scene)
@@ -42,13 +43,13 @@ export class CreateMap {
 
     beforeRenderUpdate() {
         this.deltaTime = this.scene.getEngine().getDeltaTime() / 1000.0;
-        this.player.beforeRenderUpdate()
+        this.player.beforeRenderUpdate(this.deltaTime)
         this.isPlayerOob()
         this.mapBeforeRenderUpdate()
     }
 
     createPlayer(PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
-        this.player = new Player(this.scene, this.canvas, this, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION)
+        this.player = new Player(this.scene, this.canvas, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, this.main)
     }
 
     modifySettings(scene, canvas) {
@@ -58,18 +59,12 @@ export class CreateMap {
             }
         };
 
-        document.addEventListener("pointerlockchange", () => {
+        const checkIfPointerLocked = () => {
             const element = document.pointerLockElement || null;
             scene.alreadyLocked = !!element;
-        });
-    }
-
-    startRender() {
-        this.engine.runRenderLoop(() => {
-            if (window.document.hasFocus()) {
-                this.scene.render();
-            }
-        })
+        };
+        checkIfPointerLocked();
+        document.addEventListener("pointerlockchange", checkIfPointerLocked)
     }
 
     isPlayerOob() {

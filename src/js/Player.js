@@ -2,13 +2,13 @@ import * as BABYLON from '@babylonjs/core'
 
 import { PlayerInput } from "./PlayerInput.js";
 import { StateMachine } from "./playerStates/StateMachine.js";
+import { fade } from './utils/utils.js';
 
 export class Player {
 
-    constructor(scene, canvas, map, respawnPos, SPAWN_ROTATION) {
+    constructor(scene, canvas, respawnPos, respawnRotation, main) {
         this.isGrounded = false;
         this.isSprinting = false;
-        this.respawning = false
         this.lowFriction = false;
         this.groundDisableTimer = 0;
         this.jumpBufferTimer = 0;
@@ -24,11 +24,11 @@ export class Player {
 
         this.scene = scene;
         this.canvas = canvas;
-        this.map = map;
+        this.playerData = main.playerData
 
         this.stateMachine = new StateMachine(this)
 
-        this.GRAVITY = this.map.scene._physicsEngine.gravity;
+        this.GRAVITY = this.scene._physicsEngine.gravity;
 
         this.WALK_SPEED = 4.5;
         this.SPRINT_SPEED = 5.7;
@@ -50,18 +50,19 @@ export class Player {
         this.highlight.blurHorizontalSize = 0.8
         this.highlight.blurVerticalSize = 0.8
 
-        this.createPlayer(respawnPos, SPAWN_ROTATION)
+        this.createPlayer(respawnPos, respawnRotation)
         this.cameraRotation()
 
-        this.outliner = new BABYLON.SelectionOutlineLayer("outliner", scene)
-        this.outliner.outlineColor = BABYLON.Color3.White()
-        this.outliner.outlineThickness = 3.0;
+        // BUG ICI
+        // this.outliner = new BABYLON.SelectionOutlineLayer("outliner", scene)
+        // this.outliner.outlineColor = BABYLON.Color3.White()
+        // this.outliner.outlineThickness = 3.0;
 
         this.input = new PlayerInput(scene);
     }
 
 
-    createPlayer(respawnPos, SPAWN_ROTATION) {
+    createPlayer(respawnPos, respawnRotation) {
         let playerHeight = 1.8;
         let playerWidth = 0.7;
         if (respawnPos == undefined) {
@@ -80,11 +81,11 @@ export class Player {
 
         this.head = new BABYLON.TransformNode("head", this.scene);
         this.head.position.y = 0.8;
-        if (SPAWN_ROTATION == undefined) {
-            SPAWN_ROTATION = BABYLON.Vector3.Zero();
+        if (respawnRotation == undefined) {
+            respawnRotation = BABYLON.Vector3.Zero();
         }
-        this.SPAWN_ROTATION = SPAWN_ROTATION;
-        this.head.rotation.copyFrom(SPAWN_ROTATION);
+        this.respawnRotation = respawnRotation;
+        this.head.rotation.y = respawnRotation;
         this.head.parent = this.player;
 
         this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero(), this.scene);
@@ -128,8 +129,8 @@ export class Player {
     }
 
     // fonction appelé à chaque frame
-    beforeRenderUpdate() {
-        this.deltaTime = this.map.deltaTime;
+    beforeRenderUpdate(deltaTime) {
+        this.deltaTime = deltaTime;
         if (this.stateMachine.checkIfCanMove()) {
             this.updateGrounded();
             this.applyGravity();
@@ -138,20 +139,23 @@ export class Player {
             this.updateRayPos(this.pickRay);
             this.checkPickRayHit();
             this.updateHandPos();
+            this.updateHeldMeshPos();
         }
-        this.updateHeldMeshPos();
         this.stateMachine.update();
 
         // debug
         if (this.input.justPressed["debug"]) {
-            console.log(this.character._position)
+            // console.log(this.character._position)
             // console.log(this.camera.rotation.x)
             // this.stateMachine.currentState.nextState = this.stateMachine.states.other
             // console.log(this.character._position.y)
             // console.log(this.input.inputMap)
-            // this.respawn()
+            this.respawn()
             // console.log(this.map.box.position);
             // console.log(this.velocity.y);
+        }
+        if (this.input.justPressed["KeyO"]) {
+            this.playerData.canJump = !this.playerData.canJump
         }
     }
 
@@ -310,22 +314,30 @@ export class Player {
     checkPickRayHit() {
         const pickInfo = this.scene.pickWithRay(this.pickRay);
 
-        if (pickInfo.hit && pickInfo.pickedMesh.metadata?.isInteractable) {
-            this.highlight.addMesh(pickInfo.pickedMesh, BABYLON.Color3.White());
-            this.outliner.addSelection(pickInfo.pickedMesh);
+        if (pickInfo.hit) {
+            if (pickInfo.pickedMesh.metadata?.canBeHeld && !this.playerData.canHoldMeshes) {
+                return;
+            }
+            if (pickInfo.pickedMesh.metadata?.isInteractable) {
+                this.highlight.addMesh(pickInfo.pickedMesh, BABYLON.Color3.White());
+                // this.outliner.addSelection(pickInfo.pickedMesh);
 
-            if (pickInfo.pickedMesh.metadata?.onInteract && this.input.justPressed["interact"]) {
-                pickInfo.pickedMesh.metadata.onInteract();
+                if (pickInfo.pickedMesh.metadata?.onInteract && this.input.justPressed["interact"]) {
+                    pickInfo.pickedMesh.metadata.onInteract();
+                }
             }
         } else {
             this.highlight.removeAllMeshes()
-            this.outliner.clearSelection();
+            // this.outliner.clearSelection();
 
         }
     }
 
     // à faire empecher le joueur de sauter sur l'objet tenu
     updateHandPos() {
+        if (!this.playerData.canHoldMeshes) {
+            return;
+        }
         if (this.heldMesh) {
             const pickInfo = this.scene.pickWithRay(this.pickRay, (mesh) => {
                 return !(mesh === this.heldMesh); // ou si physics
@@ -340,9 +352,12 @@ export class Player {
     }
 
     updateHeldMeshPos() {
+        if (!this.playerData.canHoldMeshes) {
+            return;
+        }
         if (this.heldMesh) {
             this.highlight.removeAllMeshes()
-            this.outliner.clearSelection();
+            // this.outliner.clearSelection();
 
             const aggregate = this.heldMesh.metadata.boxAggregate;
             aggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
@@ -368,6 +383,9 @@ export class Player {
     }
 
     grapplingHook() {
+        if (!this.playerData.hasGrapplingHook) {
+            return;
+        }
         if (this.grapplingHookTimer > 0) {
             this.grapplingHookTimer -= this.deltaTime;
         }
@@ -405,33 +423,14 @@ export class Player {
     }
 
     respawn() {
-        if (!this.respawning) {
-            this.respawning = true
-            respawnOverlay.classList.add("fade-out");
-            const fadeOutHandler = () => {
-                respawnOverlay.removeEventListener("animationend", fadeOutHandler);
-
-                this.dropHeldMesh();
-                this.character.setPosition(this.respawnPos);
-                this.velocity = BABYLON.Vector3.Zero();
-                this.head.rotation.copyFrom(this.SPAWN_ROTATION);
-                this.camera.rotation.x = 0;
-
-                respawnOverlay.classList.remove("fade-out");
-                respawnOverlay.classList.add("fade-in");
-
-                const fadeInHandler = () => {
-                    respawnOverlay.removeEventListener("animationend", fadeInHandler);
-
-                    respawnOverlay.classList.remove("fade-in");
-                    this.respawning = false;
-                };
-
-                respawnOverlay.addEventListener("animationend", fadeInHandler);
-            };
-
-            respawnOverlay.addEventListener("animationend", fadeOutHandler);
+        const respawnPlayer = () => {
+            this.dropHeldMesh();
+            this.character.setPosition(this.respawnPos);
+            this.velocity = BABYLON.Vector3.Zero();
+            this.head.rotation.y = this.respawnRotation;
+            this.camera.rotation.x = 0;
         }
+        fade(respawnPlayer)
     }
 
     lerpCameraTo(fov) {

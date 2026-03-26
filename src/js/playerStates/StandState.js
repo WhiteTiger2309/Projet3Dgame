@@ -17,26 +17,28 @@ export class StandState extends State {
     }
 
     update() {
-        if (this.player.input.justPressed["jump"]) {
-            this.player.jumpBufferTimer = this.player.JUMP_BUFFER_TIME;
-        }
-        if (this.player.jumpBufferTimer > 0) {
-            this.player.jumpBufferTimer -= this.player.deltaTime;
-        }
-        if (this.player.jumpBufferTimer > 0 && this.player.isGrounded) {
-            this.player.inheritedVelocity.copyFrom(this.player.supportInfo.averageSurfaceVelocity);
-            this.player.velocity.addInPlace(this.player.inheritedVelocity);
-            if (this.player.velocity.y < 0) {
-                this.player.velocity.y = this.player.JUMP_FORCE;
+        if (this.player.playerData.canJump) {
+            if (this.player.input.justPressed["jump"]) {
+                this.player.jumpBufferTimer = this.player.JUMP_BUFFER_TIME;
             }
-            else {
-                this.player.velocity.y += this.player.JUMP_FORCE;
+            if (this.player.jumpBufferTimer > 0) {
+                this.player.jumpBufferTimer -= this.player.deltaTime;
             }
-            this.player.isGrounded = false;
-            this.player.groundDisableTimer = this.player.GROUND_DISABLE_TIME;
-            this.player.jumpBufferTimer = 0;
+            if (this.player.jumpBufferTimer > 0 && this.player.isGrounded) {
+                this.player.inheritedVelocity.copyFrom(this.player.supportInfo.averageSurfaceVelocity);
+                this.player.velocity.addInPlace(this.player.inheritedVelocity);
+                if (this.player.velocity.y < 0) {
+                    this.player.velocity.y = this.player.JUMP_FORCE;
+                }
+                else {
+                    this.player.velocity.y += this.player.JUMP_FORCE;
+                }
+                this.player.isGrounded = false;
+                this.player.groundDisableTimer = this.player.GROUND_DISABLE_TIME;
+                this.player.jumpBufferTimer = 0;
+            }
         }
-        else if (this.player.input.justPressed["sprint"] && !this.player.isSprinting && this.player.input.inputMap["forward"]) {
+        if (this.player.input.justPressed["sprint"] && !this.player.isSprinting && this.player.input.inputMap["forward"]) {
             this.player.isSprinting = true;
             this.player.speed = this.player.SPRINT_SPEED;
             this.player.fov = this.player.SPRINT_FOV;

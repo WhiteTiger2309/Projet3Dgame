@@ -4,15 +4,13 @@ import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics } from './utils/utils.js';
 
 export class Map3 extends CreateMap{
-    constructor(canvas, engine, havokPlugin) {
-        const PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 3, 0)
-        const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 2, 0)
+    constructor(canvas, engine, havokPlugin, main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
+        PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 3, 0)
+        PLAYER_SPAWN_ROTATION = 2
 
-        super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION)
+        super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main)
 
         this.createImportedMap()
-
-        super.startRender()
     }
 
     // à rajouter si besoin de faire des updates chaque frame, comme des plateformes qui bougent

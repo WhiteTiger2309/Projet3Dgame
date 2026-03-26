@@ -4,15 +4,17 @@ import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics, createButton, addTriggerObservable } from './utils/utils.js';
 
 export class Map2 extends CreateMap {
-    constructor(canvas, engine, havokPlugin) {
-        const PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 3, -10)
-        const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 2, 0)
+    constructor(canvas, engine, havokPlugin, main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
+        if (PLAYER_SPAWN_POS == undefined) {
+            PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 3, -10)
+        }
+        if (PLAYER_SPAWN_ROTATION == undefined) {
+            PLAYER_SPAWN_ROTATION = 2
+        }
 
-        super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION)
+        super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main)
 
         this.createMap()
-
-        super.startRender()
     }
 
     createMap() {
