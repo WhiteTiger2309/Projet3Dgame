@@ -17,6 +17,16 @@ export class Player {
         this.isHoldingMesh = false;
         this.lastY = 0
         this.lastYCounter = 0
+        this._audioUnlockBound = false;
+        this._audioManagers = [];
+        this.ambientMusic = null;
+        this.ambientMusicReady = false;
+        this.ambientMusicNative = null;
+        this.ambientMusicNativeReady = false;
+        this._ambientMusicNativeStarted = false;
+        this._ambientMusicNativeUnlockTried = false;
+        this._ambientMusicLastRetryAt = 0;
+        this._ambientMusicStarted = false;
 
         this.scene = scene;
         this.canvas = canvas;
@@ -44,6 +54,355 @@ export class Player {
         this.cameraRotation()
 
         this.input = new PlayerInput(scene);
+        this.scene.audioEnabled = true;
+        this.ensureBabylonAudioEngine();
+        this.initAmbientMusic();
+        this.initAmbientMusicNative();
+        this.bindAudioUnlock();
+        this.initFootstepAudio();
+    }
+
+    normalizeBinaryAudioData(data) {
+        if (!data) return data;
+        if (data instanceof ArrayBuffer) return data;
+        if (ArrayBuffer.isView(data)) {
+            const view = data;
+            return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+        }
+        return data;
+    }
+
+    ensureBabylonAudioEngine() {
+        // Initialisation explicite pour eviter un audioEngine absent selon le bundling ESM.
+        if (!BABYLON.Engine.audioEngine && BABYLON.AudioEngine) {
+            BABYLON.Engine.audioEngine = new BABYLON.AudioEngine();
+        }
+
+        try {
+            BABYLON.Engine.audioEngine?.setGlobalVolume?.(1);
+        } catch {
+            // noop
+        }
+    }
+
+    initAmbientMusic() {
+        this.ambientMusic = new BABYLON.Sound(
+            "ambientMusic",
+            "/sounds/main_theme.mp3",
+            this.scene,
+            () => {
+                this.ambientMusicReady = true;
+                this.ambientMusic?.setVolume(0.5);
+                this.tryStartAmbientMusic();
+            },
+            {
+                loop: true,
+                autoplay: false,
+                spatialSound: false,
+                streaming: true,
+            }
+        );
+    }
+
+    initAmbientMusicNative() {
+        const audio = new Audio("/sounds/main_theme.mp3");
+        audio.preload = "auto";
+        audio.loop = true;
+        audio.volume = 0.07;
+        this.ambientMusicNative = audio;
+        this.ambientMusicNativeReady = true;
+
+        audio.addEventListener("canplay", () => {
+            this.ambientMusicNativeReady = true;
+            this.tryStartAmbientMusicNative();
+        });
+
+        audio.addEventListener("loadeddata", () => {
+            this.ambientMusicNativeReady = true;
+        });
+
+        try {
+            audio.load();
+        } catch {
+            // noop
+        }
+    }
+
+    async warmupAmbientMusicNative() {
+        if (!this.ambientMusicNativeReady || !this.ambientMusicNative || this._ambientMusicNativeUnlockTried) {
+            return;
+        }
+        this._ambientMusicNativeUnlockTried = true;
+
+        try {
+            const a = this.ambientMusicNative;
+            const prevMuted = a.muted;
+            const prevTime = a.currentTime;
+
+            a.muted = true;
+            a.currentTime = 0;
+            await a.play();
+            a.pause();
+            a.currentTime = prevTime;
+            a.muted = prevMuted;
+        } catch {
+            // noop
+        }
+    }
+
+    tryStartAmbientMusicNative() {
+        if (this._ambientMusicNativeStarted || !this.ambientMusicNative) return;
+
+        try {
+            this.ambientMusicNative.currentTime = 0;
+            const playPromise = this.ambientMusicNative.play();
+            if (playPromise && typeof playPromise.then === "function") {
+                playPromise
+                    .then(() => {
+                        this._ambientMusicNativeStarted = true;
+                    })
+                    .catch(() => {
+                        this._ambientMusicNativeStarted = false;
+                    });
+            } else {
+                this._ambientMusicNativeStarted = true;
+            }
+        } catch {
+            // noop
+        }
+    }
+
+    retryAmbientMusicIfNeeded() {
+        if (this._ambientMusicNativeStarted) return;
+
+        const now = Date.now();
+        if (now - this._ambientMusicLastRetryAt < 1500) return;
+        this._ambientMusicLastRetryAt = now;
+
+        this.tryUnlockAudioContext();
+        this.tryStartAmbientMusic();
+        this.tryStartAmbientMusicNative();
+    }
+
+    tryStartAmbientMusic() {
+        if (this._ambientMusicStarted || !this.ambientMusicReady || !this.ambientMusic) {
+            this.tryStartAmbientMusicNative();
+            return;
+        }
+
+        try {
+            this.ambientMusic.play();
+            this._ambientMusicStarted = true;
+        } catch {
+            this.tryStartAmbientMusicNative();
+        }
+    }
+
+    initFootstepAudio() {
+        this.footstepSound = null;
+        this.footstepSoundReady = false;
+        this.footstepNativeAudio = null;
+        this.footstepNativeReady = false;
+        this._footstepNativeUrl = null;
+        this._footstepNativeUnlockTried = false;
+        this._footstepReadyTimeout = null;
+        this.footstepStepTimer = 0;
+        this.footstepWalkInterval = 0.45;
+        this.footstepSprintInterval = 0.30;
+
+        this.footstepCandidates = [
+            "/sounds/51124243-footstep-372877.mp3",
+            "/sounds/footstep-safe.wav",
+        ];
+
+        this.initNativeFootstepFallback(0);
+        this.loadFootstepCandidate(0);
+    }
+
+    initNativeFootstepFallback(index) {
+        if (index >= this.footstepCandidates.length) {
+            this.footstepNativeReady = false;
+            return;
+        }
+
+        const url = this.footstepCandidates[index];
+        const audio = new Audio(url);
+        audio.preload = "auto";
+        audio.crossOrigin = "anonymous";
+
+        const onNativeReady = () => {
+            this.footstepNativeAudio = audio;
+            this.footstepNativeReady = true;
+            this._footstepNativeUrl = url;
+        };
+
+        const onNativeError = () => {
+            this.initNativeFootstepFallback(index + 1);
+        };
+
+        audio.addEventListener("canplaythrough", onNativeReady, { once: true });
+        audio.addEventListener("error", onNativeError, { once: true });
+
+        try {
+            audio.load();
+        } catch {
+            onNativeError();
+        }
+    }
+
+    async warmupNativeFootstepMedia() {
+        if (!this.footstepNativeReady || !this.footstepNativeAudio || this._footstepNativeUnlockTried) {
+            return;
+        }
+        this._footstepNativeUnlockTried = true;
+
+        try {
+            const a = this.footstepNativeAudio;
+            const prevMuted = a.muted;
+            const prevTime = a.currentTime;
+
+            a.muted = true;
+            a.currentTime = 0;
+            await a.play();
+            a.pause();
+            a.currentTime = prevTime;
+            a.muted = prevMuted;
+        } catch {
+            // noop
+        }
+    }
+
+    playNativeFootstep() {
+        if (!this.footstepNativeReady || !this.footstepNativeAudio) return false;
+
+        try {
+            const shot = this.footstepNativeAudio.cloneNode(true);
+            shot.volume = 0.8;
+            shot.currentTime = 0;
+            shot.play().catch(() => {
+                // noop
+            });
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    loadFootstepCandidate(index) {
+        if (this._footstepReadyTimeout) {
+            clearTimeout(this._footstepReadyTimeout);
+            this._footstepReadyTimeout = null;
+        }
+
+        if (index >= this.footstepCandidates.length) {
+            this.footstepSoundReady = false;
+            return;
+        }
+
+        const url = this.footstepCandidates[index];
+        this.footstepSoundReady = false;
+
+        try {
+            this.footstepSound?.dispose?.();
+        } catch {
+            // noop
+        }
+
+        const fallbackToNext = (_reason) => {
+            this.loadFootstepCandidate(index + 1);
+        };
+
+        const manager = new BABYLON.AssetsManager(this.scene);
+        this._audioManagers.push(manager);
+        const task = manager.addBinaryFileTask(`footstepsBinary_${index}_${Date.now()}`, url);
+
+        task.onSuccess = (binaryTask) => {
+            let audioData = null;
+            try {
+                audioData = this.normalizeBinaryAudioData(binaryTask.data);
+            } catch (error) {
+                fallbackToNext(`normalisation binaire impossible (${String(error)})`);
+                return;
+            }
+
+            this.footstepSound = new BABYLON.Sound(
+                "footstepSafe",
+                audioData,
+                this.scene,
+                () => {
+                    this.footstepSoundReady = true;
+                    this.footstepSound?.setVolume(0.8);
+                    if (this._footstepReadyTimeout) {
+                        clearTimeout(this._footstepReadyTimeout);
+                        this._footstepReadyTimeout = null;
+                    }
+                },
+                {
+                    loop: false,
+                    autoplay: false,
+                    spatialSound: false,
+                    streaming: false,
+                }
+            );
+        };
+
+        task.onError = (_binaryTask, message, exception) => {
+            const reason = message || exception?.message || "task error";
+            fallbackToNext(reason);
+        };
+
+        try {
+            manager.load();
+        } catch (error) {
+            fallbackToNext(`AssetsManager.load() a echoue (${String(error)})`);
+            return;
+        }
+
+        this._footstepReadyTimeout = setTimeout(() => {
+            if (!this.footstepSoundReady) {
+                fallbackToNext("timeout readiness");
+            }
+        }, 4500);
+    }
+
+    bindAudioUnlock() {
+        if (this._audioUnlockBound) return;
+        this._audioUnlockBound = true;
+
+        const unlock = () => {
+            this.tryUnlockAudioContext();
+            this.tryStartAmbientMusic();
+            this.tryStartAmbientMusicNative();
+        };
+        this.scene.onPointerObservable.add((pointerInfo) => {
+            if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+                unlock();
+            }
+        });
+
+        // Certains navigateurs n'acceptent le resume audio que sur des evenements DOM globaux.
+        const unlockOnGesture = () => {
+            unlock();
+            this.warmupAmbientMusicNative();
+            this.warmupNativeFootstepMedia();
+        };
+
+        window.addEventListener("pointerdown", unlockOnGesture, { passive: true });
+        window.addEventListener("keydown", unlockOnGesture, { passive: true });
+        window.addEventListener("touchstart", unlockOnGesture, { passive: true });
+    }
+
+    tryUnlockAudioContext() {
+        this.ensureBabylonAudioEngine();
+        const audioEngine = BABYLON.Engine.audioEngine;
+
+        try {
+            audioEngine?.unlock?.();
+            audioEngine?.audioContext?.resume?.();
+            audioEngine?.setGlobalVolume?.(1);
+        } catch {
+            // Ignore: certains navigateurs exigent une interaction utilisateur stricte.
+        }
     }
 
 
@@ -115,6 +474,7 @@ export class Player {
     // fonction appelé à chaque frame
     beforeRenderUpdate() {
         this.deltaTime = this.map.deltaTime;
+        this.retryAmbientMusicIfNeeded();
         if (this.stateMachine.checkIfCanMove()) {
             this.updateGrounded();
             this.applyGravity();
@@ -125,15 +485,47 @@ export class Player {
         }
         this.updateHeldMeshPos();
         this.stateMachine.update();
+        this.updateFootstepAudio();
+    }
 
-        // debug
-        if (this.input.justPressed["KeyP"]) {
-            // console.log(this.character._position)
-            // this.stateMachine.currentState.nextState = this.stateMachine.states.other
-            // console.log(this.character._position.y)
-            // console.log(this.input.inputMap)
-            this.respawn()
-            // console.log(this.velocity.y);
+    updateFootstepAudio() {
+        this.tryUnlockAudioContext();
+
+        const canMove = this.stateMachine.checkIfCanMove();
+        const moveSpeed2D = Math.hypot(this.velocity.x, this.velocity.z);
+        const hasMoveInput =
+            !!this.input?.inputMap?.["KeyW"] ||
+            !!this.input?.inputMap?.["KeyA"] ||
+            !!this.input?.inputMap?.["KeyS"] ||
+            !!this.input?.inputMap?.["KeyD"];
+
+        const shouldPlay =
+            !this.respawning &&
+            canMove &&
+            (hasMoveInput || moveSpeed2D > 0.2);
+
+        if (shouldPlay) {
+            this.footstepStepTimer -= this.deltaTime;
+            const interval = this.isSprinting ? this.footstepSprintInterval : this.footstepWalkInterval;
+
+            if (this.footstepStepTimer <= 0) {
+                this.footstepStepTimer = interval;
+                try {
+                    if (this.footstepSoundReady && this.footstepSound) {
+                        if (this.footstepSound.isPlaying) {
+                            this.footstepSound.stop();
+                        }
+                        this.footstepSound.play();
+                    } else if (this.playNativeFootstep()) {
+                    } else {
+                        // Aucun sample pret: on attend la prochaine frame.
+                    }
+                } catch (error) {
+                    // noop
+                }
+            }
+        } else {
+            this.footstepStepTimer = 0;
         }
     }
 
@@ -320,6 +712,9 @@ export class Player {
     respawn() {
         if (!this.respawning) {
             this.respawning = true
+            if (this.footstepSound?.isPlaying) {
+                this.footstepSound.stop();
+            }
             respawnOverlay.classList.add("fade-out");
             const fadeOutHandler = () => {
                 respawnOverlay.removeEventListener("animationend", fadeOutHandler);

@@ -1,6 +1,11 @@
 import * as BABYLON from '@babylonjs/core'
 import HavokPhysics from "@babylonjs/havok";
 import '@babylonjs/loaders'
+import '@babylonjs/core/Audio/audioEngine';
+import '@babylonjs/core/Audio/audioSceneComponent';
+import '@babylonjs/core/Audio/sound';
+import '@babylonjs/core/Audio/soundTrack';
+import '@babylonjs/core/Misc/assetsManager';
 import { Map } from './Map.js';
 import { Map2 } from './Map2.js';
 import { Map3 } from './Map3.js';

@@ -7,6 +7,28 @@ export class PlayerInput {
 
         this.inputMap = {};
         this.justPressed = {};
+        this.vertical = 0;
+        this.verticalAxis = 0;
+        this.horizontal = 0;
+        this.horizontalAxis = 0;
+
+        this._onKeyDown = (evt) => {
+            const code = evt.code;
+            if (!this.inputMap[code]) {
+                this.justPressed[code] = true;
+            }
+            this.inputMap[code] = true;
+        };
+
+        this._onKeyUp = (evt) => {
+            const code = evt.code;
+            this.inputMap[code] = false;
+        };
+
+        // Fallback global: plus robuste avec pointer lock/focus navigateur.
+        window.addEventListener("keydown", this._onKeyDown);
+        window.addEventListener("keyup", this._onKeyUp);
+
         scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, (evt) => {
             const code = evt.sourceEvent.code;
             if (!this.inputMap[code]) {
@@ -21,6 +43,10 @@ export class PlayerInput {
 
         scene.onBeforeRenderObservable.add(() => {
             this.updateFromKeyboard();
+        });
+
+        // clear en fin de frame pour laisser le gameplay consommer justPressed.
+        scene.onAfterRenderObservable.add(() => {
             this.clearFrameInput();
         });
     }
