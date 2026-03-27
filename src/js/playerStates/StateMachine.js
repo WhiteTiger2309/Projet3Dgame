@@ -1,12 +1,12 @@
 import { StandState } from "./StandState.js";
-import { OtherState } from "./OtherState.js";
+import { DialogState } from "./DialogState.js";
 
 export class StateMachine {
     constructor(player) {
         this.player = player;
         this.states = {
             stand: new StandState(player, this),
-            other: new OtherState(player, this),
+            dialog: new DialogState(player, this),
         };
         this.currentState = this.states.stand;
         this.ready()
@@ -29,14 +29,14 @@ export class StateMachine {
         return this.currentState.canMove
     }
 
-    switchState(newState) {
+    switchState(newState, onEnter) {
         if (this.currentState) {
             this.currentState.exit();
             this.currentState.nextState = null;
         }
 
         this.currentState = newState;
-        this.currentState.enter();
+        this.currentState.enter(onEnter);
     }
 
 }

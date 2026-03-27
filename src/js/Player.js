@@ -54,9 +54,9 @@ export class Player {
         this.cameraRotation()
 
         // BUG ICI
-        // this.outliner = new BABYLON.SelectionOutlineLayer("outliner", scene)
-        // this.outliner.outlineColor = BABYLON.Color3.White()
-        // this.outliner.outlineThickness = 3.0;
+        this.outliner = new BABYLON.SelectionOutlineLayer("outliner", scene)
+        this.outliner.outlineColor = BABYLON.Color3.White()
+        this.outliner.outlineThickness = 3.0;
 
         this.input = new PlayerInput(scene);
     }
@@ -80,7 +80,7 @@ export class Player {
         this.character = new BABYLON.PhysicsCharacterController(respawnPos, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
 
         this.head = new BABYLON.TransformNode("head", this.scene);
-        this.head.position.y = 0.8;
+        this.head.position.y = 0.7;
         if (respawnRotation == undefined) {
             respawnRotation = BABYLON.Vector3.Zero();
         }
@@ -131,26 +131,26 @@ export class Player {
     // fonction appelé à chaque frame
     beforeRenderUpdate(deltaTime) {
         this.deltaTime = deltaTime;
+        this.updateGrounded();
+        this.applyGravity();
+        this.updateFromControls();
+        this.stateMachine.update();
         if (this.stateMachine.checkIfCanMove()) {
-            this.updateGrounded();
-            this.applyGravity();
             this.grapplingHook();
-            this.updateFromControls();
             this.updateRayPos(this.pickRay);
             this.checkPickRayHit();
             this.updateHandPos();
             this.updateHeldMeshPos();
         }
-        this.stateMachine.update();
 
         // debug
         if (this.input.justPressed["debug"]) {
-            // console.log(this.character._position)
-            // console.log(this.camera.rotation.x)
-            // this.stateMachine.currentState.nextState = this.stateMachine.states.other
+            console.log(this.character._position)
+            console.log(this.head.rotation.y)
+            // this.stateMachine.currentState.nextState = this.stateMachine.states.dialog
             // console.log(this.character._position.y)
             // console.log(this.input.inputMap)
-            this.respawn()
+            // this.respawn()
             // console.log(this.map.box.position);
             // console.log(this.velocity.y);
         }
@@ -175,9 +175,10 @@ export class Player {
         right.normalize();
 
         let move = BABYLON.Vector3.Zero();
-        move.addInPlace(forward.scale(inputZ));
-        move.addInPlace(right.scale(inputX));
-
+        if (this.stateMachine.checkIfCanMove()) {
+            move.addInPlace(forward.scale(inputZ));
+            move.addInPlace(right.scale(inputX));
+        }
         if (move.length() > 0) {
             move.normalize();
         }
@@ -217,7 +218,9 @@ export class Player {
                 }
             }
             this.lerpCameraTo(this.fov)
-            this.velocity.addInPlace(this.supportInfo.averageSurfaceVelocity);
+            if (!this.lowFriction) {
+                this.velocity.addInPlace(this.supportInfo.averageSurfaceVelocity);
+            }
         }
         else if (this.isSprinting) {
             this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 2);
@@ -320,16 +323,32 @@ export class Player {
             }
             if (pickInfo.pickedMesh.metadata?.isInteractable) {
                 this.highlight.addMesh(pickInfo.pickedMesh, BABYLON.Color3.White());
-                // this.outliner.addSelection(pickInfo.pickedMesh);
+                this.outliner.addSelection(pickInfo.pickedMesh);
+                dialogCrosshair.style.display = "none"
 
                 if (pickInfo.pickedMesh.metadata?.onInteract && this.input.justPressed["interact"]) {
                     pickInfo.pickedMesh.metadata.onInteract();
                 }
             }
-        } else {
+            else if (pickInfo.pickedMesh.metadata?.hasDialog) {
+                this.highlight.removeAllMeshes()
+                this.outliner.clearSelection();
+                dialogCrosshair.style.display = "block"
+                if (pickInfo.pickedMesh.metadata && this.input.justPressed["interact"]) {
+                    const param = [pickInfo.pickedMesh.metadata.onEnter, pickInfo.pickedMesh.metadata.onExit]
+                    this.stateMachine.switchState(this.stateMachine.states.dialog, param)
+                }
+            }
+            else {
+                this.highlight.removeAllMeshes()
+                this.outliner.clearSelection();
+                dialogCrosshair.style.display = "none"
+            }
+        }
+        else {
             this.highlight.removeAllMeshes()
-            // this.outliner.clearSelection();
-
+            this.outliner.clearSelection();
+            dialogCrosshair.style.display = "none"
         }
     }
 
@@ -340,7 +359,7 @@ export class Player {
         }
         if (this.heldMesh) {
             const pickInfo = this.scene.pickWithRay(this.pickRay, (mesh) => {
-                return !(mesh === this.heldMesh); // ou si physics
+                return (!(mesh === this.heldMesh) && mesh.physicsBody && !(mesh.physicsBody?.shape.isTrigger));
             });
             if (pickInfo.hit) {
                 this.hand.position.z = Math.max(pickInfo.distance - 0.5, 1)
@@ -357,7 +376,7 @@ export class Player {
         }
         if (this.heldMesh) {
             this.highlight.removeAllMeshes()
-            // this.outliner.clearSelection();
+            this.outliner.clearSelection();
 
             const aggregate = this.heldMesh.metadata.boxAggregate;
             aggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
@@ -400,8 +419,9 @@ export class Player {
     }
 
     checkgrapplingHookRayHit(ray) {
-        const pickInfo = this.scene.pickWithRay(ray);
-
+        const pickInfo = this.scene.pickWithRay(ray, (mesh) => {
+            return (mesh.physicsBody && !(mesh.physicsBody?.shape.isTrigger));
+        });
         if (pickInfo.hit) {
             let temp = this.velocity.clone().addInPlace(pickInfo.ray.direction.scale(30));
             if (temp.y > 10) {

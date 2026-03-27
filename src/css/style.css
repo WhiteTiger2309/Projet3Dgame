@@ -24,6 +24,39 @@ html, body {
     transform: translate(-50%, -50%);
     pointer-events: none;
 }
+
+#dialogCrosshair {
+	display: none;
+	font-size: 20px;
+	font-family: monospace;
+	color: white;
+    position: absolute;
+    top: 50%;
+    left: 57%;
+    width: auto;
+    height: auto;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+#dialogBox {
+	display: none;
+    background: rgba(0, 0, 0, 0.366);
+	font-size: 3vmin;
+	font-family: monospace;
+	text-align: center;
+	align-content: center;
+	color: white;
+	position: absolute;
+    bottom: 5%;
+    left: 50%;
+    width: 80%;
+    height: 10%;
+    transform: translate(-50%, 0%);
+	padding: 2vmin;
+    pointer-events: none;
+}
 	
 #respawnOverlay {
 	position: fixed;

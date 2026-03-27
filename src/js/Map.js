@@ -1,8 +1,8 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createButton, addTriggerObservable, createMapChangeGate } from './utils/utils.js';
-
+import { addStaticPhysics, addTriggerObservable, createMapChangeGate } from './utils/utils.js';
+import { Robot } from './Robot.js';
 import { Map2 } from './Map2.js';
 
 export class Map extends CreateMap {
@@ -13,11 +13,13 @@ export class Map extends CreateMap {
         if (PLAYER_SPAWN_ROTATION == undefined) {
             PLAYER_SPAWN_ROTATION = 4.3
         }
-        // const PLAYER_SPAWN_POS = new BABYLON.Vector3(3.89, 1, 1)
-        // const PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 4.5, 1)
-        // const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 4.3, 0)
-        // const PLAYER_SPAWN_POS = new BABYLON.Vector3(-1.6, 1, 10)
-        // const PLAYER_SPAWN_ROTATION = new BABYLON.Vector3(0, 1.5, 0)
+        // PLAYER_SPAWN_POS = new BABYLON.Vector3(3.89, 1, 1)
+        // PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 4.5, 1)
+        // PLAYER_SPAWN_ROTATION = 4.3
+        // PLAYER_SPAWN_POS = new BABYLON.Vector3(-1.6, 1, 10)
+        // PLAYER_SPAWN_ROTATION = 1.5
+        PLAYER_SPAWN_POS = new BABYLON.Vector3(0.3, 1, 7)
+        PLAYER_SPAWN_ROTATION = -0.07
 
         super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main)
 
@@ -30,9 +32,9 @@ export class Map extends CreateMap {
         this.createSkyAboveGround(this.scene);
         this.createShip(this.scene)
         this.createPuzzleMap()
-        this.addRobot()
+        new Robot(this.scene, new BABYLON.Vector3(0, 0, 10), 1.4)
         this.createBox(new BABYLON.Vector3(-11, 0.7, 0))
-        createMapChangeGate(Map2,new BABYLON.Vector3(0, 0, -10), new BABYLON.Vector3(0, 3, -10), BABYLON.Tools.ToRadians(180))
+        createMapChangeGate(Map2, new BABYLON.Vector3(0, 0, -10), new BABYLON.Vector3(0, 3, -10), BABYLON.Tools.ToRadians(180))
         addTriggerObservable(this.havokPlugin, this.main)
     }
 
@@ -55,31 +57,6 @@ export class Map extends CreateMap {
                     mesh.metadata.aggregate = addStaticPhysics(mesh, "MESH")
                 }
             });
-        });
-    }
-
-    addRobot() {
-        BABYLON.ImportMeshAsync("models/robot.glb").then((result) => {
-            const robot = result.meshes[0];
-            robot.position.z = 10
-            robot.rotationQuaternion = null
-            robot.rotation.y = 1.4
-            result.meshes.forEach(mesh => {
-                if (mesh.metadata?.gltf?.extras.collisions) {
-                    mesh.metadata.aggregate = addStaticPhysics(mesh, "CONVEX_HULL")
-                }
-            });
-            // const RobotFaceIdle = this.scene.getAnimationGroupByName("RobotFaceIdle")
-            // RobotFaceIdle.stop()
-            // // const RobotTalking = this.scene.getAnimationGroupByName("RobotFaceTalking")
-            // // RobotTalking.start(true)
-            const RobotIdle = this.scene.getAnimationGroupByName("RobotIdle")
-            RobotIdle.start(true)
-            // console.log(this.scene.animationGroups)
-
-            // console.log(result)
-            // result.transformNodes[5]._children[0]._rotationQuaternion.y = 0.5
-            // console.log(result.transformNodes[5]._children[0])
         });
     }
 

@@ -9,7 +9,7 @@ export class StandState extends State {
     }
 
     setStates() {
-        this.otherState = this.stateMachine.states.other;
+        this.dialogState = this.stateMachine.states.dialog;
     }
 
     enter() {
