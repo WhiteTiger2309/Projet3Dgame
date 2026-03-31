@@ -2,11 +2,11 @@ import * as BABYLON from '@babylonjs/core'
 import HavokPhysics from "@babylonjs/havok";
 import '@babylonjs/loaders'
 
-import { changeMap } from './utils/utils.js';
+import { addTriggerObservable } from './utils/utils.js';
+import { AssetsLoader } from './utils/AssetsLoader.js'; 
 import { Map } from './Map.js';
 import { Map2 } from './Map2.js';
-import { Map3 } from './Map3.js';
-import { MapTest } from './Map_test.js';
+import { Player } from './Player.js';
 
 export class Main {
 
@@ -14,50 +14,80 @@ export class Main {
         this.canvas = document.querySelector("canvas");
         this.engine = new BABYLON.Engine(this.canvas, true);
         this.currentScene = null;
-        this.playerData = {
-            canHoldMeshes: true,
-            canJump: true,
-            hasGrapplingHook: true
-        }
+        this.assets = {}
+        this.textures = {}
+        this.materials = {}
+        this.sounds = {}
 
         window.addEventListener("resize", () => this.engine.resize())
 
-        this.start()
+        this.initGame()
     }
-
-    async start() {
-        await this.initGame()
-    }
-
+    
     async initGame() {
         this.havokInstance = await HavokPhysics();
         this.havokPlugin = new BABYLON.HavokPlugin(true, this.havokInstance);
+        addTriggerObservable(this.havokPlugin, this)
+
+        this.scene = this.createScene()
+        this.assetsLoader = new AssetsLoader(this)
+        this.createBaseLight();
+        this.modifySettings();
+        await this.assetsLoader.preloadAllAssets()
 
         this.startGame(this.canvas, this.engine, this.havokPlugin)
     }
 
-    async loadScene(createSceneFn) {
-        if (this.currentScene) {
-            this.engine.stopRenderLoop();
-            await this.currentScene.whenReadyAsync();
-            this.currentScene.dispose();
-            this.havokPlugin = new BABYLON.HavokPlugin(true, this.havokInstance);
-        }
+    createScene() {
+        const scene = new BABYLON.Scene(this.engine);
 
-        this.currentScene = createSceneFn(this.canvas, this.engine, this.havokPlugin, this);
+        scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), this.havokPlugin);
+
+        scene.collisionsEnabled = false;
+
+        return scene;
+    }
+
+    createBaseLight() {
+        const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), this.scene);
+        hemi.intensity = 0.75;
+    }
+
+    modifySettings() {
+        this.scene.onPointerDown = () => {
+            if (!this.scene.alreadyLocked) {
+                this.canvas.requestPointerLock();
+            }
+        };
+
+        const checkIfPointerLocked = () => {
+            const element = document.pointerLockElement || null;
+            this.scene.alreadyLocked = !!element;
+        };
+        checkIfPointerLocked();
+        document.addEventListener("pointerlockchange", checkIfPointerLocked)
+    }
+
+    startGame() {
+        this.createPlayer();
+
+        this.map = new Map2(this.canvas, this.engine, this.havokPlugin, this);
+        this.scene.registerBeforeRender(() => {
+            this.map.beforeRenderUpdate();
+        })
         this.startRender()
+    }
+    
+    createPlayer() {
+        this.player = new Player(this.scene, this.canvas, this)
     }
 
     startRender() {
         this.engine.runRenderLoop(() => {
             if (window.document.hasFocus()) {
-                this.currentScene.render();
+                this.scene.render();
             }
         })
-    }
-
-    startGame(canvas, engine, havokPlugin) {
-        changeMap(Map, this);
     }
 
 }

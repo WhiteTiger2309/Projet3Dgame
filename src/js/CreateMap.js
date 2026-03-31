@@ -1,39 +1,23 @@
 import * as BABYLON from '@babylonjs/core'
 
-import { Player } from './Player.js';
-
 export class CreateMap {
     constructor(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main) {
         this.engine = engine;
         this.canvas = canvas;
         this.havokPlugin = havokPlugin;
         this.main = main
+        this.player = main.player
+        this.player.respawnPos = PLAYER_SPAWN_POS
+        this.player.respawnRotation = PLAYER_SPAWN_ROTATION
 
-        this.scene = this.createScene()
+        this.scene = main.scene;
+
         this.createLights(this.scene)
         this.changeSceneBackground(this.scene)
-        this.modifySettings(this.scene, this.canvas);
-        this.createPlayer(PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION);
-    }
-
-    createScene() {
-        const scene = new BABYLON.Scene(this.engine);
-
-        scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), this.havokPlugin);
-
-        scene.collisionsEnabled = false;
-
-        scene.registerBeforeRender(() => {
-            this.beforeRenderUpdate();
-        })
-
-        return scene;
+        this.player.resetPos()
     }
 
     createLights(scene) {
-        const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
-        hemi.intensity = 0.75;
-
         const dir = new BABYLON.DirectionalLight("dir0", new BABYLON.Vector3(-0.5, -1, 0.2), scene);
         dir.intensity = 1.25;
         dir.position = new BABYLON.Vector3(50, 80, -30);
@@ -46,25 +30,6 @@ export class CreateMap {
         this.player.beforeRenderUpdate(this.deltaTime)
         this.isPlayerOob()
         this.mapBeforeRenderUpdate()
-    }
-
-    createPlayer(PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
-        this.player = new Player(this.scene, this.canvas, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, this.main)
-    }
-
-    modifySettings(scene, canvas) {
-        scene.onPointerDown = () => {
-            if (!scene.alreadyLocked) {
-                canvas.requestPointerLock();
-            }
-        };
-
-        const checkIfPointerLocked = () => {
-            const element = document.pointerLockElement || null;
-            scene.alreadyLocked = !!element;
-        };
-        checkIfPointerLocked();
-        document.addEventListener("pointerlockchange", checkIfPointerLocked)
     }
 
     isPlayerOob() {

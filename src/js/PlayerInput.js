@@ -55,11 +55,11 @@ export class PlayerInput {
                 this.inputMap[code] = false;
             }
         });
+    }
 
-        scene.onBeforeRenderObservable.add(() => {
-            this.updateFromKeyboard();
-            this.clearFrameInput();
-        });
+    update() {
+        this.updateFromKeyboard();
+        this.clearFrameInput();
     }
 
     updateFromKeyboard() {

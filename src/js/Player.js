@@ -6,7 +6,7 @@ import { fade } from './utils/utils.js';
 
 export class Player {
 
-    constructor(scene, canvas, respawnPos, respawnRotation, main) {
+    constructor(scene, canvas, main) {
         this.isGrounded = false;
         this.isSprinting = false;
         this.lowFriction = false;
@@ -22,9 +22,17 @@ export class Player {
         this.line.color = new BABYLON.Color3(0, 0, 0);
         this.grapplingHookTimer = 0;
 
+        this.respawnPos = new BABYLON.Vector3(0, 4.5, 0)
+        this.respawnRotation = 0
+
         this.scene = scene;
         this.canvas = canvas;
-        this.playerData = main.playerData
+        this.main = main
+        this.playerData = {
+            canHoldMeshes: true,
+            canJump: true,
+            hasGrapplingHook: true
+        }
 
         this.stateMachine = new StateMachine(this)
 
@@ -50,7 +58,7 @@ export class Player {
         this.highlight.blurHorizontalSize = 0.8
         this.highlight.blurVerticalSize = 0.8
 
-        this.createPlayer(respawnPos, respawnRotation)
+        this.createPlayer()
         this.cameraRotation()
 
         // BUG ICI
@@ -62,30 +70,22 @@ export class Player {
     }
 
 
-    createPlayer(respawnPos, respawnRotation) {
+    createPlayer() {
         let playerHeight = 1.8;
         let playerWidth = 0.7;
-        if (respawnPos == undefined) {
-            respawnPos = new BABYLON.Vector3(0, 3, 0)
-        }
-        this.respawnPos = respawnPos;
 
         this.player = new BABYLON.TransformNode("player", this.scene);
         this.player.isVisible = false;
         // this.player = BABYLON.MeshBuilder.CreateCapsule("player", { height: playerHeight, radius: playerWidth / 2 }, this.scene);
         // this.player.isVisible = true;
 
-        this.player.position.copyFrom(respawnPos);
+        this.player.position.copyFrom(this.respawnPos);
 
-        this.character = new BABYLON.PhysicsCharacterController(respawnPos, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
+        this.character = new BABYLON.PhysicsCharacterController(this.respawnPos, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
 
         this.head = new BABYLON.TransformNode("head", this.scene);
         this.head.position.y = 0.7;
-        if (respawnRotation == undefined) {
-            respawnRotation = BABYLON.Vector3.Zero();
-        }
-        this.respawnRotation = respawnRotation;
-        this.head.rotation.y = respawnRotation;
+        this.head.rotation.y = this.respawnRotation;
         this.head.parent = this.player;
 
         this.camera = new BABYLON.FreeCamera("camera", BABYLON.Vector3.Zero(), this.scene);
@@ -155,8 +155,10 @@ export class Player {
             // console.log(this.velocity.y);
         }
         if (this.input.justPressed["KeyO"]) {
-            this.playerData.canJump = !this.playerData.canJump
+            // this.playerData.canJump = !this.playerData.canJump
         }
+
+        this.input.update()
     }
 
 
@@ -442,15 +444,16 @@ export class Player {
         }
     }
 
+    resetPos() {
+        this.dropHeldMesh();
+        this.character.setPosition(this.respawnPos);
+        this.velocity = BABYLON.Vector3.Zero();
+        this.head.rotation.y = this.respawnRotation;
+        this.camera.rotation.x = 0;
+    }
+
     respawn() {
-        const respawnPlayer = () => {
-            this.dropHeldMesh();
-            this.character.setPosition(this.respawnPos);
-            this.velocity = BABYLON.Vector3.Zero();
-            this.head.rotation.y = this.respawnRotation;
-            this.camera.rotation.x = 0;
-        }
-        fade(respawnPlayer)
+        fade(this.resetPos())
     }
 
     lerpCameraTo(fov) {

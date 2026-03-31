@@ -20,37 +20,35 @@ export function addStaticPhysics(mesh, shapeName) {
  * @param gateRotation {Vector3} - The rotation of the gate
  * @param playerSpawnRotation {Vector3} - The rotation of the player spawn
  */
-export function createMapChangeGate(map, gatePos, playerSpawnPos, gateRotation, playerSpawnRotation) {
-    BABYLON.ImportMeshAsync("models/testLevelChange.glb").then((result) => {
-        const gate = result.meshes[0];
-        let trigger;
-        gate.position = gatePos
-        gate.rotationQuaternion = null
-        gate.rotation.y = gateRotation
-        result.meshes.forEach(mesh => {
-            if (mesh.metadata?.gltf?.extras.collisions) {
-                mesh.metadata.aggregate = addStaticPhysics(mesh, "MESH")
-            }
-            if (mesh.name == "mapChangeTrigger") {
-                mesh.isVisible = false;
-                trigger = mesh
-                const triggerAggregate = addStaticPhysics(mesh, "BOX");
-                triggerAggregate.shape.isTrigger = true;
-            }
-        });
-
-        trigger.metadata = {
-            map: map,
-            spawnPos: playerSpawnPos,
-            spawnRotation: playerSpawnRotation
-        };
+export function createMapChangeGate(main, map, gatePos, playerSpawnPos, gateRotation, playerSpawnRotation) {
+    const instances = main.assets["mapGate"].instantiateModelsToScene((name) => name);
+    const gate = instances.rootNodes[0];
+    let trigger;
+    gate.position = gatePos
+    gate.rotationQuaternion = null
+    gate.rotation.y = gateRotation
+    gate.getDescendants().forEach(mesh => {
+        if (mesh.metadata?.gltf?.extras.collisions) {
+            mesh.metadata.aggregate = addStaticPhysics(mesh, "MESH")
+        }
+        if (mesh.name == "mapChangeTrigger") {
+            mesh.isVisible = false;
+            trigger = mesh
+            const triggerAggregate = addStaticPhysics(mesh, "BOX");
+            triggerAggregate.shape.isTrigger = true;
+        }
     });
+
+    trigger.metadata = {
+        map: map,
+        spawnPos: playerSpawnPos,
+        spawnRotation: playerSpawnRotation
+    };
 }
 
 
 export function createButton(defaultPos, activateFunc, deactivateFunc, scene) {
     const button = BABYLON.MeshBuilder.CreateBox("button", { width: 1, depth: 1, height: 0.2 }, scene);
-    button.material = new BABYLON.StandardMaterial("buttonMat", scene);
     button.position = defaultPos;
     const meshAggregate = addStaticPhysics(button, "BOX")
     meshAggregate.body.disablePreStep = false;
@@ -132,8 +130,13 @@ export function fade(func) {
  * @param spawnRotation {Vector3} - The rotation of the player spawn
  */
 export function changeMap(mapToLoad, main, spawnPos, spawnRotation) {
-    main.loadScene((canvas, engine, havokPlugin, main) => {
-        const map = new mapToLoad(canvas, engine, havokPlugin, main, spawnPos, spawnRotation);
-        return map.scene;
-    });
+    main.scene.meshes.filter(mesh => mesh.name !== "grapplingHook").forEach(mesh => mesh.dispose());
+    main.scene.lights.filter(light => light.name !== "hemi").forEach(light => light.dispose());
+    while (main.scene.animationGroups.length) {
+        main.scene.animationGroups[0].dispose();
+    }
+    main.scene.skeletons.forEach(skeleton => skeleton.dispose());
+
+    const map = new mapToLoad(main.canvas, main.engine, main.havokPlugin, main, spawnPos, spawnRotation);
+    return map;
 }

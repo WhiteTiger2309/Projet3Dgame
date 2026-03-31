@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, addTriggerObservable, createMapChangeGate } from './utils/utils.js';
+import { addStaticPhysics, createMapChangeGate } from './utils/utils.js';
 import { Robot } from './Robot.js';
 import { Map2 } from './Map2.js';
 
@@ -13,13 +13,6 @@ export class Map extends CreateMap {
         if (PLAYER_SPAWN_ROTATION == undefined) {
             PLAYER_SPAWN_ROTATION = 4.3
         }
-        // PLAYER_SPAWN_POS = new BABYLON.Vector3(3.89, 1, 1)
-        // PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 4.5, 1)
-        // PLAYER_SPAWN_ROTATION = 4.3
-        // PLAYER_SPAWN_POS = new BABYLON.Vector3(-1.6, 1, 10)
-        // PLAYER_SPAWN_ROTATION = 1.5
-        PLAYER_SPAWN_POS = new BABYLON.Vector3(0.3, 1, 7)
-        PLAYER_SPAWN_ROTATION = -0.07
 
         super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main)
 
@@ -32,10 +25,9 @@ export class Map extends CreateMap {
         this.createSkyAboveGround(this.scene);
         this.createShip(this.scene)
         this.createPuzzleMap()
-        new Robot(this.scene, new BABYLON.Vector3(0, 0, 10), 1.4)
+        new Robot(this.main, new BABYLON.Vector3(0, 0, 10), 1.4)
         this.createBox(new BABYLON.Vector3(-11, 0.7, 0))
-        createMapChangeGate(Map2, new BABYLON.Vector3(0, 0, -10), new BABYLON.Vector3(0, 3, -10), BABYLON.Tools.ToRadians(180))
-        addTriggerObservable(this.havokPlugin, this.main)
+        createMapChangeGate(this.main, Map2, new BABYLON.Vector3(0, 0, -10), new BABYLON.Vector3(0, 2, 0), BABYLON.Tools.ToRadians(180))
     }
 
     mapBeforeRenderUpdate() {
@@ -44,51 +36,48 @@ export class Map extends CreateMap {
 
     createGround(scene) {
         const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 250, height: 250, subdivisions: 2 }, scene);
-        this.addGroundTexture(ground)
+        ground.material = this.main.materials["ground"];
         addStaticPhysics(ground, "BOX");
     }
 
     createPuzzleMap() {
-        BABYLON.ImportMeshAsync("models/testMap.glb").then((result) => {
-            const map = result.meshes[0];
-            map.position.x = -10
-            result.meshes.forEach(mesh => {
-                if (mesh.metadata?.gltf?.extras.collisions) {
-                    mesh.metadata.aggregate = addStaticPhysics(mesh, "MESH")
-                }
-            });
-        });
+        const instances = this.main.assets["testMap"].instantiateModelsToScene((name) => name);
+        const map = instances.rootNodes[0];
+        map.position.x = -10
+        map.getDescendants().forEach(mesh => {
+            if (mesh.metadata?.gltf?.extras.collisions) {
+                mesh.metadata.aggregate = addStaticPhysics(mesh, "MESH")
+            }
+            mesh.metadata.aggregate = addStaticPhysics(mesh, "MESH")
+        })
     }
 
     createShip(scene) {
-        BABYLON.ImportMeshAsync("models/shipTest.glb").then((result) => {
-            // let ship = result.meshes[0]
-            result.meshes.forEach(mesh => {
-                // console.log(mesh.name)
-                if (mesh.metadata?.gltf?.extras.collisions) {
-                    mesh.metadata.aggregate = addStaticPhysics(mesh, "MESH")
-                }
-            });
+        const instances = this.main.assets["ship"].instantiateModelsToScene((name) => name);
+        const ship = instances.rootNodes[0];
+        ship.getDescendants().forEach(mesh => {
+            if (mesh.metadata?.gltf?.extras.collisions) {
+                mesh.metadata.aggregate = addStaticPhysics(mesh, "MESH")
+            }
+        })
+        const door = scene.getMeshByName("Door");
+        door.metadata.defaultPos = door.position.clone();
+        door.metadata.isOpen = false;
+        door.metadata.aggregate.body.disablePreStep = false;
 
-            const door = scene.getMeshByName("Door");
-            door.metadata.defaultPos = door.position.clone();
-            door.metadata.isOpen = false;
-            door.metadata.aggregate.body.disablePreStep = false;
+        const buttonPressedAnimation = scene.getAnimationGroupByName("InsideButtonPressed")
+        buttonPressedAnimation.stop()
 
-            const buttonPressedAnimation = scene.getAnimationGroupByName("InsideButtonPressed")
-            buttonPressedAnimation.stop()
-
-            const insideButton = scene.getMeshByName("InsideButton")
-            insideButton.metadata = {
-                isInteractable: true,
-                onInteract: () => {
-                    if (!buttonPressedAnimation.isPlaying) {
-                        buttonPressedAnimation.play();
-                        this.toggleShipDoor(door);
-                    }
+        const insideButton = scene.getMeshByName("InsideButton")
+        insideButton.metadata = {
+            isInteractable: true,
+            onInteract: () => {
+                if (!buttonPressedAnimation.isPlaying) {
+                    buttonPressedAnimation.play();
+                    this.toggleShipDoor(door);
                 }
             }
-        });
+        }
     }
 
     toggleShipDoor(door) {
@@ -105,7 +94,6 @@ export class Map extends CreateMap {
 
     createBox(pos) {
         this.box = BABYLON.MeshBuilder.CreateBox("box", { width: 1, depth: 1, height: 1 }, this.scene);
-        this.box.material = new BABYLON.StandardMaterial("boxMat", this.scene);
         this.box.position = pos;
         const boxAggregate = new BABYLON.PhysicsAggregate(this.box, BABYLON.PhysicsShapeType.BOX, { mass: 50.25, friction: 0.75, restitution: 0 }, this.scene);
         this.box.metadata = {
@@ -130,25 +118,7 @@ export class Map extends CreateMap {
         );
         sky.position = new BABYLON.Vector3(0, -20, 0);
         sky.isPickable = false;
-
-        const skyMat = new BABYLON.StandardMaterial("spaceSkyAboveMat", scene);
-        skyMat.diffuseTexture = new BABYLON.Texture("/assets/space/space1.png", scene);
-        skyMat.diffuseTexture.uScale = 1;
-        skyMat.diffuseTexture.vScale = 1;
-        skyMat.emissiveTexture = skyMat.diffuseTexture;
-        skyMat.disableLighting = true;
-        skyMat.backFaceCulling = false;
-        sky.material = skyMat;
-    }
-
-    addGroundTexture = (ground) => {
-        const mat = new BABYLON.StandardMaterial("groundMat", this.scene);
-        mat.diffuseTexture = new BABYLON.Texture("/assets/terrain/asphalt_01.jpg", this.scene);
-        mat.diffuseTexture.uScale = 28;
-        mat.diffuseTexture.vScale = 28;
-        mat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
-        mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-        ground.material = mat;
+        sky.material = this.main.materials["spaceSkyAbove"];
     }
 
 }
