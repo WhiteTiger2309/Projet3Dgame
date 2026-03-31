@@ -2,6 +2,7 @@ import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics, createButton, addTriggerObservable } from './utils/utils.js';
+import { createMetalFloorTexture, createPbrPanelMaterial } from './utils/materials.js';
 
 export class Map extends CreateMap {
     constructor(canvas, engine, havokPlugin) {
@@ -38,12 +39,22 @@ export class Map extends CreateMap {
             scene
         );
 
-        const mat = new BABYLON.StandardMaterial("groundMat", scene);
-        mat.diffuseTexture = new BABYLON.Texture("/assets/terrain/asphalt_01.jpg", scene);
-        mat.diffuseTexture.uScale = 28;
-        mat.diffuseTexture.vScale = 28;
-        mat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
-        mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+        const groundTex = createMetalFloorTexture(scene, "metalFloor_dt_map", {
+            size: 1024,
+            panel: 192,
+            seamAlpha: 0.22,
+            grooveAlpha: 0.14,
+            microNoiseAlpha: 0.05,
+        });
+        const mat = createPbrPanelMaterial(scene, 'groundMat', {
+            baseColor: new BABYLON.Color3(0.72, 0.74, 0.78),
+            texture: groundTex,
+            textureUScale: 8,
+            textureVScale: 8,
+            metallic: 0.03,
+            roughness: 0.96,
+            environmentIntensity: 0.18,
+        });
         ground.material = mat;
 
         addStaticPhysics(ground, "BOX")

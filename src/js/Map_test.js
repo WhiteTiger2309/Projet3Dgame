@@ -2,6 +2,7 @@ import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics, createButton, addTriggerObservable } from './utils/utils.js';
+import { createSciFiPanelTexture, createSciFiEmissiveLinesTexture, createPbrPanelMaterial, createEmissiveStripTexture } from './utils/materials.js';
 
 export class MapTest extends CreateMap {
     constructor(canvas, engine, havokPlugin) {
@@ -81,12 +82,19 @@ export class MapTest extends CreateMap {
             subdivisions: 2,
         }, scene);
 
-        const mat = new BABYLON.StandardMaterial('groundMat', scene);
-        mat.diffuseTexture = new BABYLON.Texture('/assets/terrain/asphalt_01.jpg', scene);
-        mat.diffuseTexture.uScale = 26;
-        mat.diffuseTexture.vScale = 12;
-        mat.specularColor = new BABYLON.Color3(0.03, 0.03, 0.03);
-        ground.material = mat;
+        // Test A/B: ground back to original asphalt image (no materials.js helpers).
+        const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
+        const asphalt = new BABYLON.Texture('/assets/terrain/asphalt_01.jpg', scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+        asphalt.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+        asphalt.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+        asphalt.uScale = 10;
+        asphalt.vScale = 5;
+        asphalt.gammaSpace = true;
+        asphalt.anisotropicFilteringLevel = 8;
+        groundMat.diffuseTexture = asphalt;
+        // Asphalt is matte; keep specular low to avoid shiny highlights.
+        groundMat.specularColor = BABYLON.Color3.Black();
+        ground.material = groundMat;
 
         addStaticPhysics(ground, 'BOX');
 
@@ -120,8 +128,30 @@ export class MapTest extends CreateMap {
     }
 
     createBoundaryWalls(scene) {
-        const wallMat = new BABYLON.StandardMaterial('wallMat', scene);
-        wallMat.diffuseColor = new BABYLON.Color3(0.16, 0.17, 0.20);
+        const wallPanelTex = createSciFiPanelTexture(scene, 'wallPanel_dt', {
+            size: 512,
+            grid: 96,
+            lineAlpha: 0.22,
+            microNoiseAlpha: 0.05,
+        });
+
+        const wallNeon = createSciFiEmissiveLinesTexture(scene, 'wallNeon_dt', {
+            size: 512,
+            grid: 96,
+            lineAlpha: 0.9,
+            boltAlpha: 0.75,
+            color: new BABYLON.Color3(0.0, 0.95, 1.0),
+        });
+        const wallMat = createPbrPanelMaterial(scene, 'wallMat', {
+            baseColor: new BABYLON.Color3(0.16, 0.17, 0.20),
+            texture: wallPanelTex,
+            textureUScale: 2,
+            textureVScale: 1,
+            metallic: 0.05,
+            roughness: 0.9,
+            emissiveColor: new BABYLON.Color3(0.0, 0.95, 1.0).scale(0.22),
+            emissiveTexture: wallNeon,
+        });
 
         const makeWall = (name, width, height, depth, position) => {
             const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
@@ -261,8 +291,31 @@ export class MapTest extends CreateMap {
             depth: sizeVec3.z,
         }, this.scene);
 
-        const mat = new BABYLON.StandardMaterial(name + '_mat', this.scene);
-        mat.diffuseColor = new BABYLON.Color3(0.28, 0.30, 0.36);
+        const doorTex = createSciFiPanelTexture(this.scene, name + '_panel_dt', {
+            size: 512,
+            grid: 128,
+            lineAlpha: 0.24,
+            microNoiseAlpha: 0.06,
+        });
+        const doorEmissive = createEmissiveStripTexture(this.scene, name + '_emissive_dt', {
+            size: 256,
+            style: 'outline',
+            outlineWidth: 0.012,
+            outlineGlow: 0.055,
+            color: new BABYLON.Color3(0.0, 0.95, 1.0),
+            intensity: 1.25,
+        });
+        const mat = createPbrPanelMaterial(this.scene, name + '_mat', {
+            baseColor: new BABYLON.Color3(0.28, 0.30, 0.36),
+            texture: doorTex,
+            textureUScale: 1,
+            textureVScale: 1,
+            metallic: 0.08,
+            roughness: 0.75,
+            // Boost emissive above 1.0 so bloom actually triggers.
+            emissiveColor: new BABYLON.Color3(0.0, 0.9, 1.0).scale(2.25),
+            emissiveTexture: doorEmissive,
+        });
         door.material = mat;
         door.position = position.clone();
 
@@ -292,9 +345,25 @@ export class MapTest extends CreateMap {
         }, this.scene);
         cube.position = position.clone();
 
-        const mat = new BABYLON.StandardMaterial(name + '_mat', this.scene);
-        mat.diffuseColor = color;
-        mat.specularColor = new BABYLON.Color3(0.03, 0.03, 0.03);
+        const cubeTex = createSciFiPanelTexture(this.scene, name + '_panel_dt', {
+            size: 512,
+            grid: 128,
+            lineAlpha: 0.2,
+            microNoiseAlpha: 0.05,
+        });
+
+        // Keep materials visually distinct per cube type (heavy vs conductive).
+        const metallic = cubeType === 'conductive' ? 0.12 : 0.06;
+        const roughness = cubeType === 'conductive' ? 0.65 : 0.85;
+        const emissive = cubeType === 'conductive' ? color.scale(0.08) : BABYLON.Color3.Black();
+
+        const mat = createPbrPanelMaterial(this.scene, name + '_mat', {
+            baseColor: color,
+            emissiveColor: emissive,
+            texture: cubeTex,
+            metallic,
+            roughness,
+        });
         cube.material = mat;
 
         const agg = new BABYLON.PhysicsAggregate(
@@ -326,8 +395,30 @@ export class MapTest extends CreateMap {
         }, this.scene);
         plate.position = position.clone();
 
-        const plateMat = new BABYLON.StandardMaterial(triggerId + '_mat', this.scene);
-        plateMat.diffuseColor = color;
+        const plateTex = createSciFiPanelTexture(this.scene, triggerId + '_panel_dt', {
+            size: 512,
+            grid: 128,
+            lineAlpha: 0.18,
+            microNoiseAlpha: 0.05,
+        });
+        const plateEmissive = createEmissiveStripTexture(this.scene, triggerId + '_emissive_dt', {
+            size: 256,
+            style: 'outline',
+            outlineWidth: 0.012,
+            outlineGlow: 0.055,
+            color: color.scale(1.0),
+            intensity: 1.2,
+        });
+        const plateMat = createPbrPanelMaterial(this.scene, triggerId + '_mat', {
+            baseColor: new BABYLON.Color3(0.18, 0.19, 0.22),
+            texture: plateTex,
+            textureUScale: 1,
+            textureVScale: 1,
+            metallic: 0.06,
+            roughness: 0.88,
+            emissiveColor: color.scale(2.0),
+            emissiveTexture: plateEmissive,
+        });
         plate.material = plateMat;
         addStaticPhysics(plate, 'BOX');
 
@@ -356,9 +447,30 @@ export class MapTest extends CreateMap {
         }, this.scene);
         socket.position = position.clone();
 
-        const mat = new BABYLON.StandardMaterial(triggerId + '_mat', this.scene);
-        mat.diffuseColor = color;
-        mat.emissiveColor = color.scale(0.3);
+        const socketTex = createSciFiPanelTexture(this.scene, triggerId + '_panel_dt', {
+            size: 512,
+            grid: 96,
+            lineAlpha: 0.18,
+            microNoiseAlpha: 0.05,
+        });
+        const socketEmissive = createEmissiveStripTexture(this.scene, triggerId + '_emissive_dt', {
+            size: 256,
+            style: 'outline',
+            outlineWidth: 0.012,
+            outlineGlow: 0.055,
+            color: color.scale(1.0),
+            intensity: 1.3,
+        });
+        const mat = createPbrPanelMaterial(this.scene, triggerId + '_mat', {
+            baseColor: new BABYLON.Color3(0.10, 0.11, 0.13),
+            texture: socketTex,
+            textureUScale: 1,
+            textureVScale: 1,
+            metallic: 0.10,
+            roughness: 0.78,
+            emissiveColor: color.scale(2.0),
+            emissiveTexture: socketEmissive,
+        });
         socket.material = mat;
         addStaticPhysics(socket, 'BOX');
 
@@ -388,9 +500,21 @@ export class MapTest extends CreateMap {
         this.laserEmitter.position = new BABYLON.Vector3(0, 1.2, -8);
         this.applyLaserVisualRotations();
 
-        const emitterMat = new BABYLON.StandardMaterial('laserEmitterMat', scene);
-        emitterMat.diffuseColor = new BABYLON.Color3(1.0, 0.2, 0.2);
-        emitterMat.emissiveColor = new BABYLON.Color3(0.8, 0.1, 0.1);
+        const emitterEmissive = createEmissiveStripTexture(scene, 'laserEmitter_emissive_dt', {
+            size: 256,
+            style: 'outline',
+            outlineWidth: 0.012,
+            outlineGlow: 0.055,
+            color: new BABYLON.Color3(1.0, 0.25, 0.15),
+            intensity: 1.2,
+        });
+        const emitterMat = createPbrPanelMaterial(scene, 'laserEmitterMat', {
+            baseColor: new BABYLON.Color3(0.22, 0.22, 0.24),
+            metallic: 0.12,
+            roughness: 0.65,
+            emissiveColor: new BABYLON.Color3(1.0, 0.25, 0.15).scale(2.0),
+            emissiveTexture: emitterEmissive,
+        });
         this.laserEmitterBaseEmissive = emitterMat.emissiveColor.clone();
         this.laserEmitter.material = emitterMat;
         const emitterAgg = addStaticPhysics(this.laserEmitter, 'BOX');
@@ -409,10 +533,21 @@ export class MapTest extends CreateMap {
         this.laserMirror.rotation.y = this.laserState.mirrorYaw;
         this.laserMirror.rotation.x = this.laserState.mirrorPitch;
 
-        const mirrorMat = new BABYLON.StandardMaterial('laserMirrorMat', scene);
-        mirrorMat.diffuseColor = new BABYLON.Color3(0.65, 0.75, 0.9);
-        mirrorMat.specularColor = new BABYLON.Color3(0.9, 0.9, 0.9);
-        mirrorMat.emissiveColor = new BABYLON.Color3(0.08, 0.1, 0.16);
+        const mirrorEmissive = createEmissiveStripTexture(scene, 'laserMirror_emissive_dt', {
+            size: 256,
+            style: 'outline',
+            outlineWidth: 0.012,
+            outlineGlow: 0.055,
+            color: new BABYLON.Color3(0.0, 0.95, 1.0),
+            intensity: 1.1,
+        });
+        const mirrorMat = createPbrPanelMaterial(scene, 'laserMirrorMat', {
+            baseColor: new BABYLON.Color3(0.55, 0.65, 0.8),
+            metallic: 0.35,
+            roughness: 0.25,
+            emissiveColor: new BABYLON.Color3(0.0, 0.95, 1.0).scale(1.85),
+            emissiveTexture: mirrorEmissive,
+        });
         this.laserMirrorBaseEmissive = mirrorMat.emissiveColor.clone();
         this.laserMirror.material = mirrorMat;
         const mirrorAgg = addStaticPhysics(this.laserMirror, 'BOX');
@@ -430,9 +565,21 @@ export class MapTest extends CreateMap {
         this.laserSensor.position = new BABYLON.Vector3(26, 1.0, -2.5);
         this.laserSensor.rotation.x = Math.PI / 2;
 
-        this.laserSensorMat = new BABYLON.StandardMaterial('laserSensorMat', scene);
-        this.laserSensorMat.diffuseColor = new BABYLON.Color3(0.2, 0.25, 0.3);
-        this.laserSensorMat.emissiveColor = new BABYLON.Color3(0.06, 0.06, 0.08);
+        const sensorEmissive = createEmissiveStripTexture(scene, 'laserSensor_emissive_dt', {
+            size: 256,
+            style: 'outline',
+            outlineWidth: 0.012,
+            outlineGlow: 0.055,
+            color: new BABYLON.Color3(0.9, 0.35, 0.12),
+            intensity: 1.0,
+        });
+        this.laserSensorMat = createPbrPanelMaterial(scene, 'laserSensorMat', {
+            baseColor: new BABYLON.Color3(0.14, 0.16, 0.20),
+            metallic: 0.08,
+            roughness: 0.85,
+            emissiveColor: new BABYLON.Color3(0.9, 0.35, 0.12).scale(1.85),
+            emissiveTexture: sensorEmissive,
+        });
         this.laserSensor.material = this.laserSensorMat;
         addStaticPhysics(this.laserSensor, 'BOX');
 
@@ -464,11 +611,11 @@ export class MapTest extends CreateMap {
         if (!emitterMat || !mirrorMat) return;
 
         emitterMat.emissiveColor = this.laserControl.active === 'emitter'
-            ? new BABYLON.Color3(1.0, 0.55, 0.2)
+            ? new BABYLON.Color3(2.2, 1.1, 0.35)
             : this.laserEmitterBaseEmissive.clone();
 
         mirrorMat.emissiveColor = this.laserControl.active === 'mirror'
-            ? new BABYLON.Color3(0.25, 0.9, 1.0)
+            ? new BABYLON.Color3(0.55, 2.2, 2.6)
             : this.laserMirrorBaseEmissive.clone();
     }
 

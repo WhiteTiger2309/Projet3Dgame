@@ -2,6 +2,7 @@ import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics, createButton, addTriggerObservable } from './utils/utils.js';
+import { createFireTexture, createFlareTexture, createMetalFloorTexture, createPbrPanelMaterial } from './utils/materials.js';
 
 export class Map2 extends CreateMap {
     constructor(canvas, engine, havokPlugin) {
@@ -109,12 +110,22 @@ export class Map2 extends CreateMap {
             scene
         );
 
-        const mat = new BABYLON.StandardMaterial("groundMat", scene);
-        mat.diffuseTexture = new BABYLON.Texture("/assets/terrain/asphalt_01.jpg", scene);
-        mat.diffuseTexture.uScale = 28;
-        mat.diffuseTexture.vScale = 28;
-        mat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
-        mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+        const groundTex = createMetalFloorTexture(scene, "metalFloor_dt_map2", {
+            size: 1024,
+            panel: 192,
+            seamAlpha: 0.22,
+            grooveAlpha: 0.14,
+            microNoiseAlpha: 0.05,
+        });
+        const mat = createPbrPanelMaterial(scene, 'groundMat', {
+            baseColor: new BABYLON.Color3(0.72, 0.74, 0.78),
+            texture: groundTex,
+            textureUScale: 8,
+            textureVScale: 8,
+            metallic: 0.03,
+            roughness: 0.96,
+            environmentIntensity: 0.18,
+        });
         ground.material = mat;
 
         // Ground visuel
@@ -147,9 +158,11 @@ export class Map2 extends CreateMap {
         beacon.position = new BABYLON.Vector3(0, 2.2, 10);
 
         const fireMat = new BABYLON.StandardMaterial("beacon_fx_mat", scene);
-        fireMat.diffuseTexture = new BABYLON.Texture("/assets/fx/fire.jpg", scene);
-        fireMat.diffuseTexture.hasAlpha = true;
-        fireMat.opacityTexture = fireMat.diffuseTexture;
+        const fireTex = createFireTexture(scene, "beacon_fire_dt", { width: 256, height: 512 });
+        fireTex.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+        fireTex.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+        fireMat.diffuseTexture = fireTex;
+        fireMat.opacityTexture = fireTex;
         fireMat.emissiveColor = new BABYLON.Color3(0.9, 0.45, 0.1);
         fireMat.backFaceCulling = false;
         beacon.material = fireMat;
@@ -161,7 +174,7 @@ export class Map2 extends CreateMap {
         beaconLight.range = 18;
 
         const particles = new BABYLON.ParticleSystem("beacon_fx_particles", 300, scene);
-        particles.particleTexture = new BABYLON.Texture("/assets/fx/flare.png", scene);
+        particles.particleTexture = createFlareTexture(scene, "beacon_flare_dt", { size: 128 });
         particles.emitter = new BABYLON.Vector3(0, 0.5, 10);
         particles.minSize = 0.15;
         particles.maxSize = 0.5;
