@@ -19,16 +19,21 @@ export class AssetsLoader {
 
     async loadTexture(name, url, onReady) {
         const textureTask = this.assetsManager.addTextureTask(name, url);
-
         textureTask.onSuccess = (task) => {
             this.main.textures[name] = task.texture;
             if (onReady) onReady(task.texture);
         };
     }
 
+    async loadImage(name, url) {
+        const imageTask = this.assetsManager.addImageTask(name, url);
+        imageTask.onSuccess = (task) => {
+            this.main.images[name] = task.image;
+        };
+    }
+
     async loadSound(name, url) {
         const soundTask = this.assetsManager.addBinaryFileTask(name, url);
-
         soundTask.onSuccess = (task) => {
             const sound = new BABYLON.Sound(name, task.data, this.scene);
             this.main.sounds[name] = sound;
@@ -36,21 +41,37 @@ export class AssetsLoader {
     }
 
     async preloadAllAssets() {
-        this.loadModel("testMap", "testMap.glb")
+        this.loadImage("ground", "images/hmap.jpeg")
+
+        this.loadModel("puzzleMap1", "puzzleMap1.glb")
+        this.loadModel("cave", "cave.glb")
         this.loadModel("robot", "robot.glb")
         this.loadModel("ship", "shipTest.glb")
         this.loadModel("mapGate", "testLevelChange.glb")
+        this.loadModel("structure", "structure.glb")
+        for (let i = 1; i <= 5; i++) {
+            this.loadModel("ruins" + i, "ruins" + i + ".glb")
+        }
+        this.loadModel("ruinsPuzzleMap", "ruinsPuzzleMap.glb")
+        this.loadModel("slime", "slime.glb")
+
 
         this.loadTexture("asphalt", "/assets/terrain/asphalt_01.jpg", (texture) => {
             const mat = new BABYLON.StandardMaterial("groundMat", this.scene);
             mat.diffuseTexture = texture
-            mat.diffuseTexture.uScale = 28;
-            mat.diffuseTexture.vScale = 28;
+            mat.diffuseTexture.uScale = 50;
+            mat.diffuseTexture.vScale = 50;
             mat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
             mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
             this.main.materials["ground"] = mat;
-
         })
+        
+        const mat = new BABYLON.StandardMaterial("nonElectric", this.scene);
+        this.main.materials["nonElectric"] = mat;
+        const mat2 = new BABYLON.StandardMaterial("electric", this.scene);
+        mat2.emissiveColor = new BABYLON.Color3(1, 1, 0);
+        this.main.materials["electric"] = mat2;
+
         this.loadTexture("space", "/assets/space/space1.png", (texture) => {
             const mat = new BABYLON.StandardMaterial("spaceSkyAboveMat", this.scene);
             mat.diffuseTexture = texture

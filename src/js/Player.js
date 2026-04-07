@@ -6,12 +6,12 @@ import { fade } from './utils/utils.js';
 
 export class Player {
 
-    constructor(scene, canvas, main) {
+    constructor(scene, main) {
         this.isGrounded = false;
-        this.isSprinting = false;
         this.lowFriction = false;
         this.groundDisableTimer = 0;
         this.jumpBufferTimer = 0;
+        this.coyoteJumpTimer = 0;
         this.velocity = BABYLON.Vector3.Zero();
         this.inheritedVelocity = BABYLON.Vector3.Zero();
         this.heldMesh = null;
@@ -26,7 +26,6 @@ export class Player {
         this.respawnRotation = 0
 
         this.scene = scene;
-        this.canvas = canvas;
         this.main = main
         this.playerData = {
             canHoldMeshes: true,
@@ -38,16 +37,15 @@ export class Player {
 
         this.GRAVITY = this.scene._physicsEngine.gravity;
 
-        this.WALK_SPEED = 4.5;
-        this.SPRINT_SPEED = 5.7;
+        this.WALK_SPEED = 6.5;
         this.JUMP_FORCE = 4.7;
         this.SENSITIVITY = 0.0008;
         this.MAX_SLOPE_ANGLE = 60;
         this.BASE_FOV = 1.1
-        this.SPRINT_FOV = 1.3
 
         this.GROUND_DISABLE_TIME = 0.1;
         this.JUMP_BUFFER_TIME = 0.15;
+        this.COYOTE_JUMP_TIME = 0.1;
         this.GRAPPLING_HOOK_COOLDOWN = 0.3;
 
         this.speed = this.WALK_SPEED;
@@ -71,13 +69,11 @@ export class Player {
 
 
     createPlayer() {
-        let playerHeight = 1.8;
+        let playerHeight = 1.9;
         let playerWidth = 0.7;
 
         this.player = new BABYLON.TransformNode("player", this.scene);
         this.player.isVisible = false;
-        // this.player = BABYLON.MeshBuilder.CreateCapsule("player", { height: playerHeight, radius: playerWidth / 2 }, this.scene);
-        // this.player.isVisible = true;
 
         this.player.position.copyFrom(this.respawnPos);
 
@@ -94,21 +90,9 @@ export class Player {
 
         this.pickRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero(), 4);
         this.grapplingHookRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero(), 20);
+        this.footRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), new BABYLON.Vector3(0, -1, 0), 1.5);
 
         this.camera.parent = this.head;
-
-
-        // // // // temp camera pour debug commenter la ligne au dessus aussi
-        // this.camera.attachControl(this.canvas);
-        // this.camera.position = new BABYLON.Vector3(-6, 6, -13.8)
-        // this.camera.setTarget(this.player.position)
-        // this.camera.speed = 0.6;
-        // this.camera.angularSensibility = 3000;
-        // this.camera.inertia = 0.7;
-        // var rayHelper = new BABYLON.RayHelper(this.grapplingHookRay);
-        // rayHelper.show(this.scene);
-        // // // //
-
 
         this.hand = new BABYLON.TransformNode("hand", this.scene);
         this.hand.parent = this.camera;
@@ -137,16 +121,18 @@ export class Player {
         this.stateMachine.update();
         if (this.stateMachine.checkIfCanMove()) {
             this.grapplingHook();
+            this.updateFootRay()
             this.updateRayPos(this.pickRay);
             this.checkPickRayHit();
             this.updateHandPos();
             this.updateHeldMeshPos();
+            this.isOutOfBound()
         }
 
         // debug
         if (this.input.justPressed["debug"]) {
             console.log(this.character._position)
-            console.log(this.head.rotation.y)
+            console.log(BABYLON.Tools.ToDegrees(this.head.rotation.y))
             // this.stateMachine.currentState.nextState = this.stateMachine.states.dialog
             // console.log(this.character._position.y)
             // console.log(this.input.inputMap)
@@ -216,18 +202,13 @@ export class Player {
                 else {
                     this.velocity.x = 0;
                     this.velocity.z = 0;
-                    this.isSprinting = false;
                 }
             }
-            this.lerpCameraTo(this.fov)
             if (!this.lowFriction) {
                 this.velocity.addInPlace(this.supportInfo.averageSurfaceVelocity);
             }
         }
-        else if (this.isSprinting) {
-            this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 2);
-            this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.speed, this.deltaTime * 2);
-        }
+
         else if (move.length() > 0) {
             this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 3);
             this.velocity.z = BABYLON.Lerp(this.velocity.z, move.z * this.speed, this.deltaTime * 3);
@@ -304,10 +285,14 @@ export class Player {
         if (this.supportInfo.supportedState === BABYLON.CharacterSupportedState.SUPPORTED) {
             this.isGrounded = true;
             this.groundNormal = this.supportInfo.averageSurfaceNormal;
+            this.coyoteJumpTimer = this.COYOTE_JUMP_TIME
         }
         else {
             this.isGrounded = false;
             this.groundNormal = null;
+            if (this.coyoteJumpTimer > 0) {
+                this.coyoteJumpTimer -= this.deltaTime;
+            }
         }
     }
 
@@ -368,6 +353,31 @@ export class Player {
             }
             else {
                 this.hand.position.z = 3
+            }
+        }
+    }
+
+    // PAS TOP
+    updateFootRay() {
+        if (this.input.justPressed["jump"] && this.heldMesh) {
+            const aggregate = this.heldMesh.metadata.boxAggregate
+            const forward = this.head.getDirection(BABYLON.Axis.Z).scale(0.35);
+            this.footRay.origin.copyFrom(this.character._position);
+            const pickInfo = this.scene.pickWithRay(this.footRay, (mesh) => {
+                return (mesh.physicsBody && !(mesh.physicsBody?.shape.isTrigger));
+            });
+            if (pickInfo.hit && pickInfo.pickedMesh == this.heldMesh) {
+                this.dropHeldMesh(aggregate)
+            }
+            else {
+                this.footRay.origin.addInPlace(forward);
+                const pickInfo = this.scene.pickWithRay(this.footRay, (mesh) => {
+                    return (mesh.physicsBody && !(mesh.physicsBody?.shape.isTrigger));
+                });
+                if (pickInfo.hit && pickInfo.pickedMesh == this.heldMesh) {
+                    this.dropHeldMesh(aggregate)
+                }
+
             }
         }
     }
@@ -453,11 +463,8 @@ export class Player {
     }
 
     respawn() {
-        fade(this.resetPos())
-    }
-
-    lerpCameraTo(fov) {
-        this.camera.fov = BABYLON.Lerp(this.camera.fov, fov, this.deltaTime * 5.0);
+        // fade(this.resetPos)
+        this.resetPos()
     }
 
     applyCeilingHitModification() {
@@ -473,6 +480,12 @@ export class Player {
                 this.velocity.y = 0
             }
             this.lastY = this.character._position.y
+        }
+    }
+
+    isOutOfBound() {
+        if (this.player.position.y < -20) {
+            this.respawn()
         }
     }
 }

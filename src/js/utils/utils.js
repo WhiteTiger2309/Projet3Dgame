@@ -46,6 +46,25 @@ export function createMapChangeGate(main, map, gatePos, playerSpawnPos, gateRota
     };
 }
 
+export function createBounceSlime(main, pos) {
+    const instances = main.assets["slime"].instantiateModelsToScene((name) => name);
+    const slime = instances.rootNodes[0];
+    let trigger;
+    slime.position = placeOnMesh(main, pos)
+    slime.getDescendants().forEach(mesh => {
+        if (mesh.metadata?.gltf?.extras.collisions) {
+            mesh.metadata.aggregate = addStaticPhysics(mesh, "CONVEX_HULL")
+        }
+        if (mesh.name == "bounceTrigger") {
+            mesh.isVisible = false;
+            trigger = mesh
+            const triggerAggregate = addStaticPhysics(mesh, "BOX");
+            triggerAggregate.shape.isTrigger = true;
+        }
+    });
+}
+
+
 
 export function createButton(defaultPos, activateFunc, deactivateFunc, scene) {
     const button = BABYLON.MeshBuilder.CreateBox("button", { width: 1, depth: 1, height: 0.2 }, scene);
@@ -79,6 +98,14 @@ export function addTriggerObservable(havokPlugin, main) {
         const data = ev.collidedAgainst.transformNode.metadata
         if ((ev.collider.transformNode.name === "CCTransformNode" && ev.collidedAgainst.transformNode.name === "mapChangeTrigger") && ev.type === "TRIGGER_ENTERED") {
             fade(function () { changeMap(data.map, main, data.spawnPos, data.spawnRotation) });
+        }
+        if ((ev.collider.transformNode.name === "CCTransformNode" && ev.collidedAgainst.transformNode.name === "bounceTrigger") && ev.type === "TRIGGER_ENTERED") {
+            console.log(main.player.velocity.y)
+            if (main.player.velocity.y < -3) {
+                main.player.velocity.y = main.player.velocity.y * -1.2 - 2.5;
+                main.player.isGrounded = false;
+                main.player.groundDisableTimer = main.player.GROUND_DISABLE_TIME;
+            }
         }
 
         if (ev.collider.transformNode.name === "buttonTrigger" || ev.collidedAgainst.transformNode.name === "buttonTrigger") {
@@ -129,7 +156,7 @@ export function fade(func) {
  * @param spawnPos {Vector3} - The position of the player spawn
  * @param spawnRotation {Vector3} - The rotation of the player spawn
  */
-export function changeMap(mapToLoad, main, spawnPos, spawnRotation) {
+export async function changeMap(mapToLoad, main, spawnPos, spawnRotation) {
     main.scene.meshes.filter(mesh => mesh.name !== "grapplingHook").forEach(mesh => mesh.dispose());
     main.scene.lights.filter(light => light.name !== "hemi").forEach(light => light.dispose());
     while (main.scene.animationGroups.length) {
@@ -137,6 +164,45 @@ export function changeMap(mapToLoad, main, spawnPos, spawnRotation) {
     }
     main.scene.skeletons.forEach(skeleton => skeleton.dispose());
 
-    const map = new mapToLoad(main.canvas, main.engine, main.havokPlugin, main, spawnPos, spawnRotation);
+    main.scene.onBeforeRenderObservable.clear()    
+    const map = new mapToLoad(main, spawnPos, spawnRotation);
+    await map.createMap()
+    main.scene.registerBeforeRender(() => {
+        map.beforeRenderUpdate();
+    })
     return map;
+}
+
+export function placeOnGround(ground, x, z) {
+    const pos = new BABYLON.Vector3(x, 0, z)
+    const y = ground.getHeightAtCoordinates(x, z);
+    pos.y = y
+    return pos
+}
+
+export function placeOnMesh(main, pos) {
+    main.ray.origin.copyFrom(pos);
+    const pickInfo = main.scene.pickWithRay(main.ray, (mesh) => {
+        return (mesh.physicsBody && !(mesh.physicsBody?.shape.isTrigger));
+    });
+    if (pickInfo.hit) {
+        pos.y = pickInfo.pickedPoint.y
+    }
+    return pos
+}
+
+export function createMeshFromAsset(asset, pos, collisionsShape, allCollisions = true) {
+    const instances = asset.instantiateModelsToScene((name) => name);
+    const root = instances.rootNodes[0];
+    root.position = pos
+    root.getDescendants().forEach(mesh => {
+        if (allCollisions) {
+            mesh.metadata.aggregate = addStaticPhysics(mesh, collisionsShape)
+        }
+        else {
+            if (mesh.metadata?.gltf?.extras.collisions) {
+                mesh.metadata.aggregate = addStaticPhysics(mesh, collisionsShape)
+            }
+        }
+    })
 }

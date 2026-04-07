@@ -3,9 +3,10 @@ import HavokPhysics from "@babylonjs/havok";
 import '@babylonjs/loaders'
 
 import { addTriggerObservable } from './utils/utils.js';
-import { AssetsLoader } from './utils/AssetsLoader.js'; 
+import { AssetsLoader } from './utils/AssetsLoader.js';
 import { Map } from './Map.js';
 import { Map2 } from './Map2.js';
+import { MapTest } from './Map_test.js';
 import { Player } from './Player.js';
 
 export class Main {
@@ -13,21 +14,23 @@ export class Main {
     constructor() {
         this.canvas = document.querySelector("canvas");
         this.engine = new BABYLON.Engine(this.canvas, true);
-        this.currentScene = null;
         this.assets = {}
         this.textures = {}
         this.materials = {}
+        this.images = {}
         this.sounds = {}
+        this.player = null
+        this.observer = null
+        this.ray = new BABYLON.Ray(BABYLON.Vector3.Zero(), new BABYLON.Vector3(0, -1, 0), 2);
 
         window.addEventListener("resize", () => this.engine.resize())
 
         this.initGame()
     }
-    
+
     async initGame() {
         this.havokInstance = await HavokPhysics();
         this.havokPlugin = new BABYLON.HavokPlugin(true, this.havokInstance);
-        addTriggerObservable(this.havokPlugin, this)
 
         this.scene = this.createScene()
         this.assetsLoader = new AssetsLoader(this)
@@ -35,7 +38,8 @@ export class Main {
         this.modifySettings();
         await this.assetsLoader.preloadAllAssets()
 
-        this.startGame(this.canvas, this.engine, this.havokPlugin)
+        this.startGame()
+        addTriggerObservable(this.havokPlugin, this)
     }
 
     createScene() {
@@ -68,18 +72,19 @@ export class Main {
         document.addEventListener("pointerlockchange", checkIfPointerLocked)
     }
 
-    startGame() {
+    async startGame() {
         this.createPlayer();
 
-        this.map = new Map2(this.canvas, this.engine, this.havokPlugin, this);
+        this.map = new Map(this);
+        await this.map.createMap()
         this.scene.registerBeforeRender(() => {
             this.map.beforeRenderUpdate();
         })
         this.startRender()
     }
-    
+
     createPlayer() {
-        this.player = new Player(this.scene, this.canvas, this)
+        this.player = new Player(this.scene, this)
     }
 
     startRender() {

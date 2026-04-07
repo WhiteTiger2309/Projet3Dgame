@@ -1,11 +1,11 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createButton, addTriggerObservable, createMapChangeGate } from './utils/utils.js';
+import { addStaticPhysics, createButton, createMapChangeGate } from './utils/utils.js';
 import { Map } from './Map.js';
 
 export class Map2Copy extends CreateMap {
-    constructor(canvas, engine, havokPlugin, main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
+    constructor(main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
         if (PLAYER_SPAWN_POS == undefined) {
             PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 3, -10)
         }
@@ -13,9 +13,7 @@ export class Map2Copy extends CreateMap {
             PLAYER_SPAWN_ROTATION = 2
         }
 
-        super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main)
-
-        this.createMap()
+        super(PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main)
     }
 
     createMap() {
@@ -27,7 +25,6 @@ export class Map2Copy extends CreateMap {
         this.createDuck()
         this.createBridgeButton()
         createMapChangeGate(this.main, Map, new BABYLON.Vector3(0, 0, -5), new BABYLON.Vector3(0, 3, -10), BABYLON.Tools.ToRadians(0))
-        addTriggerObservable(this.havokPlugin, this.main)
     }
 
     changeSceneBackground(scene) {

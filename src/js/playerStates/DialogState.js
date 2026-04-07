@@ -18,9 +18,7 @@ export class DialogState extends State {
         console.log("Enter Dialog");
         dialogBox.style.display = "block"
         dialogCrosshair.style.display = "none"
-        this.player.isSprinting = false
         dialogBox.innerText = this.dialogManager.currentLine
-        this.player.fov = this.player.BASE_FOV;
         functions[0]()
         this.onExit = functions[1]
     }

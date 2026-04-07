@@ -1,15 +1,16 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createButton, addTriggerObservable } from './utils/utils.js';
+import { addStaticPhysics, createButton } from './utils/utils.js';
 
 export class MapTest extends CreateMap {
-    constructor(canvas, engine, havokPlugin, main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
+    constructor(main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
         PLAYER_SPAWN_POS = new BABYLON.Vector3(-24, 2, 0);
         PLAYER_SPAWN_ROTATION = 1.57;
-
-        super(canvas, engine, havokPlugin, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main);
-
+        
+        super(PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main);
+        
+        this.havokPlugin = main.havokPlugin
         this.puzzleState = {
             floorButton: false,
             heavyPlate: false,
@@ -40,7 +41,7 @@ export class MapTest extends CreateMap {
             mirrorPitch: 0,
         };
 
-        this.createMap();
+        // this.createMap();
         this.registerCustomTriggerObserver();
     }
 
@@ -53,8 +54,6 @@ export class MapTest extends CreateMap {
         this.createInteractiveObjects(this.scene);
         this.createPuzzleDevices(this.scene);
         this.createHintPanels(this.scene);
-
-        addTriggerObservable(this.havokPlugin);
     }
 
     changeSceneBackground(scene) {

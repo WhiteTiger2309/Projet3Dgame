@@ -24,7 +24,7 @@ export class StandState extends State {
             if (this.player.jumpBufferTimer > 0) {
                 this.player.jumpBufferTimer -= this.player.deltaTime;
             }
-            if (this.player.jumpBufferTimer > 0 && this.player.isGrounded) {
+            if ((this.player.jumpBufferTimer > 0 && this.player.isGrounded) || (this.player.input.justPressed["jump"] && this.player.coyoteJumpTimer > 0)) {
                 this.player.inheritedVelocity.copyFrom(this.player.supportInfo.averageSurfaceVelocity);
                 this.player.velocity.addInPlace(this.player.inheritedVelocity);
                 if (this.player.velocity.y < 0) {
@@ -36,26 +36,8 @@ export class StandState extends State {
                 this.player.isGrounded = false;
                 this.player.groundDisableTimer = this.player.GROUND_DISABLE_TIME;
                 this.player.jumpBufferTimer = 0;
+                this.player.coyoteJumpTimer = 0
             }
-        }
-        if (this.player.input.justPressed["sprint"] && !this.player.isSprinting && this.player.input.inputMap["forward"]) {
-            this.player.isSprinting = true;
-            this.player.speed = this.player.SPRINT_SPEED;
-            this.player.fov = this.player.SPRINT_FOV;
-        }
-        else if ((this.player.input.inputMap["left"] || this.player.input.inputMap["right"] || this.player.input.inputMap["backward"]) && !this.player.input.inputMap["forward"]) {
-            this.player.isSprinting = false;
-            this.player.speed = this.player.WALK_SPEED;
-            this.player.fov = this.player.BASE_FOV;
-        }
-        else if (this.player.input.justPressed["sprint"] && this.player.isSprinting) {
-            this.player.isSprinting = false;
-            this.player.speed = this.player.WALK_SPEED;
-            this.player.fov = this.player.BASE_FOV;
-        }
-        else if (!this.player.isSprinting) {
-            this.player.speed = this.player.WALK_SPEED;
-            this.player.fov = this.player.BASE_FOV;
         }
     }
 

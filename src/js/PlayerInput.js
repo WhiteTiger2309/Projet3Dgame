@@ -14,7 +14,6 @@ export class PlayerInput {
             "KeyA": "left",
             "KeyD": "right",
             "Space": "jump",
-            "CapsLock": "sprint",
             "KeyE": "interact",
             "KeyP": "debug"
         };
