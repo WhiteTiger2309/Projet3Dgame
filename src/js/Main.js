@@ -4,6 +4,12 @@ import '@babylonjs/loaders'
 
 import { addTriggerObservable } from './utils/utils.js';
 import { AssetsLoader } from './utils/AssetsLoader.js';
+import '@babylonjs/core/Audio/audioEngine';
+import '@babylonjs/core/Audio/audioSceneComponent';
+import '@babylonjs/core/Audio/sound';
+import '@babylonjs/core/Audio/soundTrack';
+import '@babylonjs/core/Misc/assetsManager';
+
 import { Map } from './Map.js';
 import { Map2 } from './Map2.js';
 import { MapTest } from './Map_test.js';

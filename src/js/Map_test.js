@@ -2,6 +2,7 @@ import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics, createButton } from './utils/utils.js';
+import { createSciFiPanelTexture, createSciFiEmissiveLinesTexture, createPbrPanelMaterial, createEmissiveStripTexture } from './utils/materials.js';
 
 export class MapTest extends CreateMap {
     constructor(main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
@@ -71,6 +72,121 @@ export class MapTest extends CreateMap {
         this.evaluatePuzzleLogic();
     }
 
+    quaternionFromUpToDir(dir) {
+        const from = BABYLON.Vector3.Up();
+        const to = dir.normalize();
+        const dot = BABYLON.Scalar.Clamp(BABYLON.Vector3.Dot(from, to), -1, 1);
+
+        if (dot > 0.999999) {
+            return BABYLON.Quaternion.Identity();
+        }
+        if (dot < -0.999999) {
+            // 180° flip
+            return BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Right(), Math.PI);
+        }
+
+        const axis = BABYLON.Vector3.Cross(from, to);
+        axis.normalize();
+        const angle = Math.acos(dot);
+        return BABYLON.Quaternion.RotationAxis(axis, angle);
+    }
+
+    ensureLaserBeamShaders() {
+        if (BABYLON.Effect.ShadersStore["laserBeamVertexShader"] && BABYLON.Effect.ShadersStore["laserBeamFragmentShader"]) {
+            return;
+        }
+
+        BABYLON.Effect.ShadersStore["laserBeamVertexShader"] = `
+            precision highp float;
+            attribute vec3 position;
+            attribute vec2 uv;
+
+            uniform mat4 worldViewProjection;
+
+            varying vec2 vUV;
+
+            void main(void) {
+                vUV = uv;
+                gl_Position = worldViewProjection * vec4(position, 1.0);
+            }
+        `;
+
+        BABYLON.Effect.ShadersStore["laserBeamFragmentShader"] = `
+            precision highp float;
+
+            varying vec2 vUV;
+
+            uniform float time;
+            uniform float beamLength;
+            uniform float intensity;
+            uniform vec3 beamColor;
+
+            void main(void) {
+                // Thin core across the width (uv.x)
+                float x = abs(vUV.x - 0.5) * 2.0;
+                float core = smoothstep(1.0, 0.0, x);
+                core = pow(core, 3.0);
+
+                // Animated pulses along the beam (uv.y)
+                float worldFreq = max(0.5, beamLength * 0.6);
+                float t = vUV.y * worldFreq - time * 6.5;
+                float pulse = 0.55 + 0.45 * sin(t * 6.2831853);
+
+                // Slight edge falloff to keep it very thin
+                float alpha = core * (0.65 + 0.35 * pulse);
+                alpha *= intensity;
+
+                vec3 col = beamColor * alpha;
+                gl_FragColor = vec4(col, alpha);
+            }
+        `;
+    }
+
+    createLaserBeamCross(scene, name, material, { width = 0.06 } = {}) {
+        const root = new BABYLON.TransformNode(name + "_root", scene);
+        root.rotationQuaternion = BABYLON.Quaternion.Identity();
+
+        const p1 = BABYLON.MeshBuilder.CreatePlane(name + "_p1", {
+            width: 1,
+            height: 1,
+            sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+        }, scene);
+        p1.isPickable = false;
+        p1.parent = root;
+        p1.material = material;
+        p1.scaling.x = width;
+
+        const p2 = p1.clone(name + "_p2");
+        p2.isPickable = false;
+        p2.parent = root;
+        p2.rotation.y = Math.PI / 2;
+        p2.scaling.x = width;
+
+        root.setEnabled(false);
+
+        return { root, p1, p2 };
+    }
+
+    setLaserBeamSegment(beam, material, start, end) {
+        const delta = end.subtract(start);
+        const length = delta.length();
+        if (!isFinite(length) || length < 0.05) {
+            beam.root.setEnabled(false);
+            return;
+        }
+
+        const dir = delta.scale(1 / length);
+        const mid = start.add(delta.scale(0.5));
+
+        beam.root.setEnabled(true);
+        beam.root.position.copyFrom(mid);
+        beam.root.rotationQuaternion = this.quaternionFromUpToDir(dir);
+        beam.p1.scaling.y = length;
+        beam.p2.scaling.y = length;
+
+        material.setFloat("beamLength", length);
+    }
+
     createGround(scene) {
         const ground = BABYLON.MeshBuilder.CreateGround('ground', {
             width: 180,
@@ -78,12 +194,19 @@ export class MapTest extends CreateMap {
             subdivisions: 2,
         }, scene);
 
-        const mat = new BABYLON.StandardMaterial('groundMat', scene);
-        mat.diffuseTexture = new BABYLON.Texture('/assets/terrain/asphalt_01.jpg', scene);
-        mat.diffuseTexture.uScale = 26;
-        mat.diffuseTexture.vScale = 12;
-        mat.specularColor = new BABYLON.Color3(0.03, 0.03, 0.03);
-        ground.material = mat;
+        // Test A/B: ground back to original asphalt image (no materials.js helpers).
+        const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
+        const asphalt = new BABYLON.Texture('/assets/terrain/asphalt_01.jpg', scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+        asphalt.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+        asphalt.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+        asphalt.uScale = 10;
+        asphalt.vScale = 5;
+        asphalt.gammaSpace = true;
+        asphalt.anisotropicFilteringLevel = 8;
+        groundMat.diffuseTexture = asphalt;
+        // Asphalt is matte; keep specular low to avoid shiny highlights.
+        groundMat.specularColor = BABYLON.Color3.Black();
+        ground.material = groundMat;
 
         addStaticPhysics(ground, 'BOX');
 
@@ -113,12 +236,35 @@ export class MapTest extends CreateMap {
         skyMat.emissiveTexture = skyMat.diffuseTexture;
         skyMat.disableLighting = true;
         skyMat.backFaceCulling = false;
+        skyMat.fogEnabled = false;
         sky.material = skyMat;
     }
 
     createBoundaryWalls(scene) {
-        const wallMat = new BABYLON.StandardMaterial('wallMat', scene);
-        wallMat.diffuseColor = new BABYLON.Color3(0.16, 0.17, 0.20);
+        const wallPanelTex = createSciFiPanelTexture(scene, 'wallPanel_dt', {
+            size: 512,
+            grid: 96,
+            lineAlpha: 0.22,
+            microNoiseAlpha: 0.05,
+        });
+
+        const wallNeon = createSciFiEmissiveLinesTexture(scene, 'wallNeon_dt', {
+            size: 512,
+            grid: 96,
+            lineAlpha: 0.9,
+            boltAlpha: 0.75,
+            color: new BABYLON.Color3(0.0, 0.95, 1.0),
+        });
+        const wallMat = createPbrPanelMaterial(scene, 'wallMat', {
+            baseColor: new BABYLON.Color3(0.16, 0.17, 0.20),
+            texture: wallPanelTex,
+            textureUScale: 2,
+            textureVScale: 1,
+            metallic: 0.05,
+            roughness: 0.9,
+            emissiveColor: new BABYLON.Color3(0.0, 0.95, 1.0).scale(0.22),
+            emissiveTexture: wallNeon,
+        });
 
         const makeWall = (name, width, height, depth, position) => {
             const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
@@ -258,8 +404,32 @@ export class MapTest extends CreateMap {
             depth: sizeVec3.z,
         }, this.scene);
 
-        const mat = new BABYLON.StandardMaterial(name + '_mat', this.scene);
-        mat.diffuseColor = new BABYLON.Color3(0.28, 0.30, 0.36);
+        const doorTex = createSciFiPanelTexture(this.scene, name + '_panel_dt', {
+            size: 512,
+            grid: 128,
+            lineAlpha: 0.24,
+            microNoiseAlpha: 0.06,
+        });
+        const doorEmissive = createEmissiveStripTexture(this.scene, name + '_emissive_dt', {
+            // Higher resolution + pixel-based outline => very thin contour even on large meshes.
+            size: 1024,
+            style: 'outline',
+            outlineWidthPx: 2,
+            outlineGlowPx: 10,
+            color: new BABYLON.Color3(0.0, 0.95, 1.0),
+            intensity: 1.25,
+        });
+        const mat = createPbrPanelMaterial(this.scene, name + '_mat', {
+            baseColor: new BABYLON.Color3(0.28, 0.30, 0.36),
+            texture: doorTex,
+            textureUScale: 1,
+            textureVScale: 1,
+            metallic: 0.08,
+            roughness: 0.75,
+            // Boost emissive above 1.0 so bloom actually triggers.
+            emissiveColor: new BABYLON.Color3(0.0, 0.9, 1.0).scale(2.25),
+            emissiveTexture: doorEmissive,
+        });
         door.material = mat;
         door.position = position.clone();
 
@@ -289,9 +459,25 @@ export class MapTest extends CreateMap {
         }, this.scene);
         cube.position = position.clone();
 
-        const mat = new BABYLON.StandardMaterial(name + '_mat', this.scene);
-        mat.diffuseColor = color;
-        mat.specularColor = new BABYLON.Color3(0.03, 0.03, 0.03);
+        const cubeTex = createSciFiPanelTexture(this.scene, name + '_panel_dt', {
+            size: 512,
+            grid: 128,
+            lineAlpha: 0.2,
+            microNoiseAlpha: 0.05,
+        });
+
+        // Keep materials visually distinct per cube type (heavy vs conductive).
+        const metallic = cubeType === 'conductive' ? 0.12 : 0.06;
+        const roughness = cubeType === 'conductive' ? 0.65 : 0.85;
+        const emissive = cubeType === 'conductive' ? color.scale(0.08) : BABYLON.Color3.Black();
+
+        const mat = createPbrPanelMaterial(this.scene, name + '_mat', {
+            baseColor: color,
+            emissiveColor: emissive,
+            texture: cubeTex,
+            metallic,
+            roughness,
+        });
         cube.material = mat;
 
         const agg = new BABYLON.PhysicsAggregate(
@@ -323,8 +509,30 @@ export class MapTest extends CreateMap {
         }, this.scene);
         plate.position = position.clone();
 
-        const plateMat = new BABYLON.StandardMaterial(triggerId + '_mat', this.scene);
-        plateMat.diffuseColor = color;
+        const plateTex = createSciFiPanelTexture(this.scene, triggerId + '_panel_dt', {
+            size: 512,
+            grid: 128,
+            lineAlpha: 0.18,
+            microNoiseAlpha: 0.05,
+        });
+        const plateEmissive = createEmissiveStripTexture(this.scene, triggerId + '_emissive_dt', {
+            size: 512,
+            style: 'outline',
+            outlineWidthPx: 2,
+            outlineGlowPx: 8,
+            color: color.scale(1.0),
+            intensity: 1.2,
+        });
+        const plateMat = createPbrPanelMaterial(this.scene, triggerId + '_mat', {
+            baseColor: new BABYLON.Color3(0.18, 0.19, 0.22),
+            texture: plateTex,
+            textureUScale: 1,
+            textureVScale: 1,
+            metallic: 0.06,
+            roughness: 0.88,
+            emissiveColor: color.scale(2.0),
+            emissiveTexture: plateEmissive,
+        });
         plate.material = plateMat;
         addStaticPhysics(plate, 'BOX');
 
@@ -353,9 +561,30 @@ export class MapTest extends CreateMap {
         }, this.scene);
         socket.position = position.clone();
 
-        const mat = new BABYLON.StandardMaterial(triggerId + '_mat', this.scene);
-        mat.diffuseColor = color;
-        mat.emissiveColor = color.scale(0.3);
+        const socketTex = createSciFiPanelTexture(this.scene, triggerId + '_panel_dt', {
+            size: 512,
+            grid: 96,
+            lineAlpha: 0.18,
+            microNoiseAlpha: 0.05,
+        });
+        const socketEmissive = createEmissiveStripTexture(this.scene, triggerId + '_emissive_dt', {
+            size: 512,
+            style: 'outline',
+            outlineWidthPx: 2,
+            outlineGlowPx: 8,
+            color: color.scale(1.0),
+            intensity: 1.3,
+        });
+        const mat = createPbrPanelMaterial(this.scene, triggerId + '_mat', {
+            baseColor: new BABYLON.Color3(0.10, 0.11, 0.13),
+            texture: socketTex,
+            textureUScale: 1,
+            textureVScale: 1,
+            metallic: 0.10,
+            roughness: 0.78,
+            emissiveColor: color.scale(2.0),
+            emissiveTexture: socketEmissive,
+        });
         socket.material = mat;
         addStaticPhysics(socket, 'BOX');
 
@@ -385,9 +614,21 @@ export class MapTest extends CreateMap {
         this.laserEmitter.position = new BABYLON.Vector3(0, 1.2, -8);
         this.applyLaserVisualRotations();
 
-        const emitterMat = new BABYLON.StandardMaterial('laserEmitterMat', scene);
-        emitterMat.diffuseColor = new BABYLON.Color3(1.0, 0.2, 0.2);
-        emitterMat.emissiveColor = new BABYLON.Color3(0.8, 0.1, 0.1);
+        const emitterEmissive = createEmissiveStripTexture(scene, 'laserEmitter_emissive_dt', {
+            size: 512,
+            style: 'outline',
+            outlineWidthPx: 2,
+            outlineGlowPx: 8,
+            color: new BABYLON.Color3(1.0, 0.25, 0.15),
+            intensity: 1.2,
+        });
+        const emitterMat = createPbrPanelMaterial(scene, 'laserEmitterMat', {
+            baseColor: new BABYLON.Color3(0.22, 0.22, 0.24),
+            metallic: 0.12,
+            roughness: 0.65,
+            emissiveColor: new BABYLON.Color3(1.0, 0.25, 0.15).scale(2.0),
+            emissiveTexture: emitterEmissive,
+        });
         this.laserEmitterBaseEmissive = emitterMat.emissiveColor.clone();
         this.laserEmitter.material = emitterMat;
         const emitterAgg = addStaticPhysics(this.laserEmitter, 'BOX');
@@ -406,10 +647,21 @@ export class MapTest extends CreateMap {
         this.laserMirror.rotation.y = this.laserState.mirrorYaw;
         this.laserMirror.rotation.x = this.laserState.mirrorPitch;
 
-        const mirrorMat = new BABYLON.StandardMaterial('laserMirrorMat', scene);
-        mirrorMat.diffuseColor = new BABYLON.Color3(0.65, 0.75, 0.9);
-        mirrorMat.specularColor = new BABYLON.Color3(0.9, 0.9, 0.9);
-        mirrorMat.emissiveColor = new BABYLON.Color3(0.08, 0.1, 0.16);
+        const mirrorEmissive = createEmissiveStripTexture(scene, 'laserMirror_emissive_dt', {
+            size: 512,
+            style: 'outline',
+            outlineWidthPx: 2,
+            outlineGlowPx: 8,
+            color: new BABYLON.Color3(0.0, 0.95, 1.0),
+            intensity: 1.1,
+        });
+        const mirrorMat = createPbrPanelMaterial(scene, 'laserMirrorMat', {
+            baseColor: new BABYLON.Color3(0.55, 0.65, 0.8),
+            metallic: 0.35,
+            roughness: 0.25,
+            emissiveColor: new BABYLON.Color3(0.0, 0.95, 1.0).scale(1.85),
+            emissiveTexture: mirrorEmissive,
+        });
         this.laserMirrorBaseEmissive = mirrorMat.emissiveColor.clone();
         this.laserMirror.material = mirrorMat;
         const mirrorAgg = addStaticPhysics(this.laserMirror, 'BOX');
@@ -427,23 +679,67 @@ export class MapTest extends CreateMap {
         this.laserSensor.position = new BABYLON.Vector3(26, 1.0, -2.5);
         this.laserSensor.rotation.x = Math.PI / 2;
 
-        this.laserSensorMat = new BABYLON.StandardMaterial('laserSensorMat', scene);
-        this.laserSensorMat.diffuseColor = new BABYLON.Color3(0.2, 0.25, 0.3);
-        this.laserSensorMat.emissiveColor = new BABYLON.Color3(0.06, 0.06, 0.08);
+        const sensorEmissive = createEmissiveStripTexture(scene, 'laserSensor_emissive_dt', {
+            size: 512,
+            style: 'outline',
+            outlineWidthPx: 2,
+            outlineGlowPx: 8,
+            color: new BABYLON.Color3(0.9, 0.35, 0.12),
+            intensity: 1.0,
+        });
+        this.laserSensorMat = createPbrPanelMaterial(scene, 'laserSensorMat', {
+            baseColor: new BABYLON.Color3(0.14, 0.16, 0.20),
+            metallic: 0.08,
+            roughness: 0.85,
+            emissiveColor: new BABYLON.Color3(0.9, 0.35, 0.12).scale(1.85),
+            emissiveTexture: sensorEmissive,
+        });
         this.laserSensor.material = this.laserSensorMat;
         addStaticPhysics(this.laserSensor, 'BOX');
 
-        this.laserBeamA = BABYLON.MeshBuilder.CreateLines('laserBeamA', {
-            points: [BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero()],
-            updatable: true,
-        }, scene);
-        this.laserBeamA.color = new BABYLON.Color3(1, 0.2, 0.2);
+        // Shader-based laser beams (animated, additive) for a more "energy" look.
+        this.ensureLaserBeamShaders();
 
-        this.laserBeamB = BABYLON.MeshBuilder.CreateLines('laserBeamB', {
-            points: [BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero()],
-            updatable: true,
-        }, scene);
-        this.laserBeamB.color = new BABYLON.Color3(1, 0.5, 0.2);
+        this._laserTime = 0;
+
+        this.laserBeamMatA = new BABYLON.ShaderMaterial(
+            "laserBeamMatA",
+            scene,
+            { vertex: "laserBeam", fragment: "laserBeam" },
+            {
+                attributes: ["position", "uv"],
+                uniforms: ["worldViewProjection", "time", "beamLength", "intensity", "beamColor"],
+                needAlphaBlending: true,
+            }
+        );
+        this.laserBeamMatA.backFaceCulling = false;
+        this.laserBeamMatA.alphaMode = BABYLON.Engine.ALPHA_ADD;
+        this.laserBeamMatA.disableDepthWrite = true;
+        this.laserBeamMatA.setColor3("beamColor", new BABYLON.Color3(1.0, 0.25, 0.15));
+        this.laserBeamMatA.setFloat("intensity", 1.35);
+        this.laserBeamMatA.setFloat("beamLength", 1);
+        this.laserBeamMatA.setFloat("time", 0);
+
+        this.laserBeamMatB = new BABYLON.ShaderMaterial(
+            "laserBeamMatB",
+            scene,
+            { vertex: "laserBeam", fragment: "laserBeam" },
+            {
+                attributes: ["position", "uv"],
+                uniforms: ["worldViewProjection", "time", "beamLength", "intensity", "beamColor"],
+                needAlphaBlending: true,
+            }
+        );
+        this.laserBeamMatB.backFaceCulling = false;
+        this.laserBeamMatB.alphaMode = BABYLON.Engine.ALPHA_ADD;
+        this.laserBeamMatB.disableDepthWrite = true;
+        this.laserBeamMatB.setColor3("beamColor", new BABYLON.Color3(1.0, 0.55, 0.2));
+        this.laserBeamMatB.setFloat("intensity", 1.15);
+        this.laserBeamMatB.setFloat("beamLength", 1);
+        this.laserBeamMatB.setFloat("time", 0);
+
+        this.laserBeamA = this.createLaserBeamCross(scene, "laserBeamA", this.laserBeamMatA, { width: 0.065 });
+        this.laserBeamB = this.createLaserBeamCross(scene, "laserBeamB", this.laserBeamMatB, { width: 0.055 });
     }
 
     toggleLaserControl(target) {
@@ -461,11 +757,11 @@ export class MapTest extends CreateMap {
         if (!emitterMat || !mirrorMat) return;
 
         emitterMat.emissiveColor = this.laserControl.active === 'emitter'
-            ? new BABYLON.Color3(1.0, 0.55, 0.2)
+            ? new BABYLON.Color3(2.2, 1.1, 0.35)
             : this.laserEmitterBaseEmissive.clone();
 
         mirrorMat.emissiveColor = this.laserControl.active === 'mirror'
-            ? new BABYLON.Color3(0.25, 0.9, 1.0)
+            ? new BABYLON.Color3(0.55, 2.2, 2.6)
             : this.laserMirrorBaseEmissive.clone();
     }
 
@@ -819,6 +1115,13 @@ export class MapTest extends CreateMap {
     }
 
     updateLaserSystem() {
+        // Animate shader time.
+        if (this.laserBeamMatA && this.laserBeamMatB) {
+            this._laserTime = (this._laserTime || 0) + (this.deltaTime || 0);
+            this.laserBeamMatA.setFloat("time", this._laserTime);
+            this.laserBeamMatB.setFloat("time", this._laserTime);
+        }
+
         const dir = this.getDirectionFromYawPitch(this.laserState.emitterYaw, this.laserState.emitterPitch);
         const start = this.laserEmitter.getAbsolutePosition().add(dir.scale(0.8));
 
@@ -826,10 +1129,9 @@ export class MapTest extends CreateMap {
         const hitA = this.scene.pickWithRay(rayA, (m) => m === this.laserMirror || m === this.laserSensor || m.name === 'northWall' || m.name === 'southWall' || m.name === 'sep2_left' || m.name === 'sep2_right');
 
         const endA = hitA?.hit ? hitA.pickedPoint : start.add(dir.scale(80));
-        BABYLON.MeshBuilder.CreateLines('laserBeamA', {
-            points: [start, endA],
-            instance: this.laserBeamA,
-        }, this.scene);
+        if (this.laserBeamA && this.laserBeamMatA) {
+            this.setLaserBeamSegment(this.laserBeamA, this.laserBeamMatA, start, endA);
+        }
 
         let sensorActive = hitA?.pickedMesh === this.laserSensor;
 
@@ -841,17 +1143,15 @@ export class MapTest extends CreateMap {
             const hitB = this.scene.pickWithRay(rayB, (m) => m === this.laserSensor || m.name === 'northWall' || m.name === 'southWall' || m.name === 'eastWall');
             const endB = hitB?.hit ? hitB.pickedPoint : startB.add(reflected.scale(80));
 
-            BABYLON.MeshBuilder.CreateLines('laserBeamB', {
-                points: [startB, endB],
-                instance: this.laserBeamB,
-            }, this.scene);
+            if (this.laserBeamB && this.laserBeamMatB) {
+                this.setLaserBeamSegment(this.laserBeamB, this.laserBeamMatB, startB, endB);
+            }
 
             sensorActive = sensorActive || hitB?.pickedMesh === this.laserSensor;
         } else {
-            BABYLON.MeshBuilder.CreateLines('laserBeamB', {
-                points: [BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero()],
-                instance: this.laserBeamB,
-            }, this.scene);
+            if (this.laserBeamB) {
+                this.laserBeamB.root.setEnabled(false);
+            }
         }
 
         this.puzzleState.laserSensor = !!sensorActive;
