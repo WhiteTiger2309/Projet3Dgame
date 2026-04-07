@@ -150,6 +150,7 @@ export class Map2 extends CreateMap {
         skyMat.emissiveTexture = skyMat.diffuseTexture;
         skyMat.disableLighting = true;
         skyMat.backFaceCulling = false;
+        skyMat.fogEnabled = false;
         sky.material = skyMat;
     }
 

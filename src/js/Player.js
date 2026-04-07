@@ -132,6 +132,17 @@ export class Player {
         if (!this.ambientMusicNativeReady || !this.ambientMusicNative || this._ambientMusicNativeUnlockTried) {
             return;
         }
+
+        // If music is already started (or currently playing), never interrupt it.
+        if (this._ambientMusicNativeStarted) return;
+        try {
+            if (!this.ambientMusicNative.paused && !this.ambientMusicNative.ended) {
+                return;
+            }
+        } catch {
+            // noop
+        }
+
         this._ambientMusicNativeUnlockTried = true;
 
         try {

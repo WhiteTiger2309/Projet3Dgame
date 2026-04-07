@@ -13,11 +13,52 @@ export class CreateMap {
         this.scene = this.createScene()
         this.createLights(this.scene)
         this.changeSceneBackground(this.scene)
+        this.setupFog();
         this.modifySettings(this.scene, this.canvas);
         this.createPlayer(PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION);
 
         // Medium bloom for neon accents (post-process on the player camera).
         this.setupNeonBloom();
+    }
+
+    setupFog() {
+        const scene = this.scene;
+        if (!scene) return;
+
+        // Inspired by the Babylon.js fog example:
+        // use EXP fog with a small animated density to make the environment feel alive.
+        scene.fogMode = BABYLON.Scene.FOGMODE_EXP;
+
+        // Fog color: prefer ambientColor (usually closer to the perceived haze),
+        // because clearColor can be near-black in space scenes and makes fog imperceptible.
+        const ac = scene.ambientColor;
+        const useAmbient = !!ac && (ac.r + ac.g + ac.b) > 0.05;
+        const src = useAmbient ? ac : scene.clearColor;
+        const r = typeof src?.r === "number" ? src.r : 0.12;
+        const g = typeof src?.g === "number" ? src.g : 0.14;
+        const b = typeof src?.b === "number" ? src.b : 0.18;
+        scene.fogColor = new BABYLON.Color3(r, g, b);
+
+        // Base density tuned for the current scale (ground width ~180).
+        // Increase for thicker fog, decrease for subtler depth cue.
+        const baseDensity = 0.016;
+        const amplitude = 0.006;
+        const speed = 0.6; // cycles/sec-ish (driven by deltaTime)
+
+        scene.fogDensity = baseDensity;
+
+        if (this._fogObserver) {
+            scene.onBeforeRenderObservable.remove(this._fogObserver);
+            this._fogObserver = null;
+        }
+
+        let alpha = 0;
+        this._fogObserver = scene.onBeforeRenderObservable.add(() => {
+            const dt = scene.getEngine().getDeltaTime() / 1000;
+            alpha += dt * speed;
+            const d = baseDensity + Math.cos(alpha) * amplitude;
+            scene.fogDensity = BABYLON.Scalar.Clamp(d, 0.004, 0.06);
+        });
     }
 
     setupNeonBloom() {

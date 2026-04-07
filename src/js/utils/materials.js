@@ -293,6 +293,8 @@ export function createEmissiveStripTexture(scene, name, {
     glowWidth = 0.22, // fraction of size
     outlineWidth = 0.08, // fraction of size (for 'outline')
     outlineGlow = 0.16, // fraction of size (for 'outline')
+    outlineWidthPx = null, // number (pixels) overrides outlineWidth when provided
+    outlineGlowPx = null, // number (pixels) overrides outlineGlow when provided
     color = new BABYLON.Color3(0.15, 0.7, 1.0),
     intensity = 1.0,
 } = {}) {
@@ -316,15 +318,22 @@ export function createEmissiveStripTexture(scene, name, {
     const glowA = clamp01(0.55 * intensity);
 
     if (style === "outline") {
-        const borderPx = Math.max(1, Math.floor(size * clamp01(outlineWidth)));
-        const glowPx = Math.max(borderPx + 1, Math.floor(size * clamp01(outlineGlow)));
+        const borderPx =
+            typeof outlineWidthPx === "number"
+                ? Math.max(1, Math.floor(outlineWidthPx))
+                : Math.max(1, Math.floor(size * clamp01(outlineWidth)));
+        const glowPx =
+            typeof outlineGlowPx === "number"
+                ? Math.max(borderPx + 1, Math.floor(outlineGlowPx))
+                : Math.max(borderPx + 1, Math.floor(size * clamp01(outlineGlow)));
 
         // Outer glow (soft)
         ctx.save();
         ctx.strokeStyle = `rgba(${r},${g},${b},${glowA})`;
         ctx.lineWidth = glowPx;
         ctx.shadowColor = `rgba(${r},${g},${b},${glowA})`;
-        ctx.shadowBlur = Math.floor(glowPx * 1.05);
+        // Tighter blur keeps the outline thin, relying on bloom for the halo.
+        ctx.shadowBlur = Math.floor(glowPx * 0.6);
         const insetGlow = Math.floor(glowPx / 2);
         ctx.strokeRect(insetGlow, insetGlow, size - insetGlow * 2, size - insetGlow * 2);
         ctx.restore();

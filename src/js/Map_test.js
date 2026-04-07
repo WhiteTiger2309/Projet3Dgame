@@ -124,6 +124,7 @@ export class MapTest extends CreateMap {
         skyMat.emissiveTexture = skyMat.diffuseTexture;
         skyMat.disableLighting = true;
         skyMat.backFaceCulling = false;
+        skyMat.fogEnabled = false;
         sky.material = skyMat;
     }
 
@@ -298,10 +299,11 @@ export class MapTest extends CreateMap {
             microNoiseAlpha: 0.06,
         });
         const doorEmissive = createEmissiveStripTexture(this.scene, name + '_emissive_dt', {
-            size: 256,
+            // Higher resolution + pixel-based outline => very thin contour even on large meshes.
+            size: 1024,
             style: 'outline',
-            outlineWidth: 0.012,
-            outlineGlow: 0.055,
+            outlineWidthPx: 2,
+            outlineGlowPx: 10,
             color: new BABYLON.Color3(0.0, 0.95, 1.0),
             intensity: 1.25,
         });
@@ -402,10 +404,10 @@ export class MapTest extends CreateMap {
             microNoiseAlpha: 0.05,
         });
         const plateEmissive = createEmissiveStripTexture(this.scene, triggerId + '_emissive_dt', {
-            size: 256,
+            size: 512,
             style: 'outline',
-            outlineWidth: 0.012,
-            outlineGlow: 0.055,
+            outlineWidthPx: 2,
+            outlineGlowPx: 8,
             color: color.scale(1.0),
             intensity: 1.2,
         });
@@ -454,10 +456,10 @@ export class MapTest extends CreateMap {
             microNoiseAlpha: 0.05,
         });
         const socketEmissive = createEmissiveStripTexture(this.scene, triggerId + '_emissive_dt', {
-            size: 256,
+            size: 512,
             style: 'outline',
-            outlineWidth: 0.012,
-            outlineGlow: 0.055,
+            outlineWidthPx: 2,
+            outlineGlowPx: 8,
             color: color.scale(1.0),
             intensity: 1.3,
         });
@@ -501,10 +503,10 @@ export class MapTest extends CreateMap {
         this.applyLaserVisualRotations();
 
         const emitterEmissive = createEmissiveStripTexture(scene, 'laserEmitter_emissive_dt', {
-            size: 256,
+            size: 512,
             style: 'outline',
-            outlineWidth: 0.012,
-            outlineGlow: 0.055,
+            outlineWidthPx: 2,
+            outlineGlowPx: 8,
             color: new BABYLON.Color3(1.0, 0.25, 0.15),
             intensity: 1.2,
         });
@@ -534,10 +536,10 @@ export class MapTest extends CreateMap {
         this.laserMirror.rotation.x = this.laserState.mirrorPitch;
 
         const mirrorEmissive = createEmissiveStripTexture(scene, 'laserMirror_emissive_dt', {
-            size: 256,
+            size: 512,
             style: 'outline',
-            outlineWidth: 0.012,
-            outlineGlow: 0.055,
+            outlineWidthPx: 2,
+            outlineGlowPx: 8,
             color: new BABYLON.Color3(0.0, 0.95, 1.0),
             intensity: 1.1,
         });
@@ -566,10 +568,10 @@ export class MapTest extends CreateMap {
         this.laserSensor.rotation.x = Math.PI / 2;
 
         const sensorEmissive = createEmissiveStripTexture(scene, 'laserSensor_emissive_dt', {
-            size: 256,
+            size: 512,
             style: 'outline',
-            outlineWidth: 0.012,
-            outlineGlow: 0.055,
+            outlineWidthPx: 2,
+            outlineGlowPx: 8,
             color: new BABYLON.Color3(0.9, 0.35, 0.12),
             intensity: 1.0,
         });
