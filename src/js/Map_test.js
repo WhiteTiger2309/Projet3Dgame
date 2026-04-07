@@ -75,6 +75,121 @@ export class MapTest extends CreateMap {
         this.evaluatePuzzleLogic();
     }
 
+    quaternionFromUpToDir(dir) {
+        const from = BABYLON.Vector3.Up();
+        const to = dir.normalize();
+        const dot = BABYLON.Scalar.Clamp(BABYLON.Vector3.Dot(from, to), -1, 1);
+
+        if (dot > 0.999999) {
+            return BABYLON.Quaternion.Identity();
+        }
+        if (dot < -0.999999) {
+            // 180° flip
+            return BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Right(), Math.PI);
+        }
+
+        const axis = BABYLON.Vector3.Cross(from, to);
+        axis.normalize();
+        const angle = Math.acos(dot);
+        return BABYLON.Quaternion.RotationAxis(axis, angle);
+    }
+
+    ensureLaserBeamShaders() {
+        if (BABYLON.Effect.ShadersStore["laserBeamVertexShader"] && BABYLON.Effect.ShadersStore["laserBeamFragmentShader"]) {
+            return;
+        }
+
+        BABYLON.Effect.ShadersStore["laserBeamVertexShader"] = `
+            precision highp float;
+            attribute vec3 position;
+            attribute vec2 uv;
+
+            uniform mat4 worldViewProjection;
+
+            varying vec2 vUV;
+
+            void main(void) {
+                vUV = uv;
+                gl_Position = worldViewProjection * vec4(position, 1.0);
+            }
+        `;
+
+        BABYLON.Effect.ShadersStore["laserBeamFragmentShader"] = `
+            precision highp float;
+
+            varying vec2 vUV;
+
+            uniform float time;
+            uniform float beamLength;
+            uniform float intensity;
+            uniform vec3 beamColor;
+
+            void main(void) {
+                // Thin core across the width (uv.x)
+                float x = abs(vUV.x - 0.5) * 2.0;
+                float core = smoothstep(1.0, 0.0, x);
+                core = pow(core, 3.0);
+
+                // Animated pulses along the beam (uv.y)
+                float worldFreq = max(0.5, beamLength * 0.6);
+                float t = vUV.y * worldFreq - time * 6.5;
+                float pulse = 0.55 + 0.45 * sin(t * 6.2831853);
+
+                // Slight edge falloff to keep it very thin
+                float alpha = core * (0.65 + 0.35 * pulse);
+                alpha *= intensity;
+
+                vec3 col = beamColor * alpha;
+                gl_FragColor = vec4(col, alpha);
+            }
+        `;
+    }
+
+    createLaserBeamCross(scene, name, material, { width = 0.06 } = {}) {
+        const root = new BABYLON.TransformNode(name + "_root", scene);
+        root.rotationQuaternion = BABYLON.Quaternion.Identity();
+
+        const p1 = BABYLON.MeshBuilder.CreatePlane(name + "_p1", {
+            width: 1,
+            height: 1,
+            sideOrientation: BABYLON.Mesh.DOUBLESIDE,
+        }, scene);
+        p1.isPickable = false;
+        p1.parent = root;
+        p1.material = material;
+        p1.scaling.x = width;
+
+        const p2 = p1.clone(name + "_p2");
+        p2.isPickable = false;
+        p2.parent = root;
+        p2.rotation.y = Math.PI / 2;
+        p2.scaling.x = width;
+
+        root.setEnabled(false);
+
+        return { root, p1, p2 };
+    }
+
+    setLaserBeamSegment(beam, material, start, end) {
+        const delta = end.subtract(start);
+        const length = delta.length();
+        if (!isFinite(length) || length < 0.05) {
+            beam.root.setEnabled(false);
+            return;
+        }
+
+        const dir = delta.scale(1 / length);
+        const mid = start.add(delta.scale(0.5));
+
+        beam.root.setEnabled(true);
+        beam.root.position.copyFrom(mid);
+        beam.root.rotationQuaternion = this.quaternionFromUpToDir(dir);
+        beam.p1.scaling.y = length;
+        beam.p2.scaling.y = length;
+
+        material.setFloat("beamLength", length);
+    }
+
     createGround(scene) {
         const ground = BABYLON.MeshBuilder.CreateGround('ground', {
             width: 180,
@@ -585,17 +700,49 @@ export class MapTest extends CreateMap {
         this.laserSensor.material = this.laserSensorMat;
         addStaticPhysics(this.laserSensor, 'BOX');
 
-        this.laserBeamA = BABYLON.MeshBuilder.CreateLines('laserBeamA', {
-            points: [BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero()],
-            updatable: true,
-        }, scene);
-        this.laserBeamA.color = new BABYLON.Color3(1, 0.2, 0.2);
+        // Shader-based laser beams (animated, additive) for a more "energy" look.
+        this.ensureLaserBeamShaders();
 
-        this.laserBeamB = BABYLON.MeshBuilder.CreateLines('laserBeamB', {
-            points: [BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero()],
-            updatable: true,
-        }, scene);
-        this.laserBeamB.color = new BABYLON.Color3(1, 0.5, 0.2);
+        this._laserTime = 0;
+
+        this.laserBeamMatA = new BABYLON.ShaderMaterial(
+            "laserBeamMatA",
+            scene,
+            { vertex: "laserBeam", fragment: "laserBeam" },
+            {
+                attributes: ["position", "uv"],
+                uniforms: ["worldViewProjection", "time", "beamLength", "intensity", "beamColor"],
+                needAlphaBlending: true,
+            }
+        );
+        this.laserBeamMatA.backFaceCulling = false;
+        this.laserBeamMatA.alphaMode = BABYLON.Engine.ALPHA_ADD;
+        this.laserBeamMatA.disableDepthWrite = true;
+        this.laserBeamMatA.setColor3("beamColor", new BABYLON.Color3(1.0, 0.25, 0.15));
+        this.laserBeamMatA.setFloat("intensity", 1.35);
+        this.laserBeamMatA.setFloat("beamLength", 1);
+        this.laserBeamMatA.setFloat("time", 0);
+
+        this.laserBeamMatB = new BABYLON.ShaderMaterial(
+            "laserBeamMatB",
+            scene,
+            { vertex: "laserBeam", fragment: "laserBeam" },
+            {
+                attributes: ["position", "uv"],
+                uniforms: ["worldViewProjection", "time", "beamLength", "intensity", "beamColor"],
+                needAlphaBlending: true,
+            }
+        );
+        this.laserBeamMatB.backFaceCulling = false;
+        this.laserBeamMatB.alphaMode = BABYLON.Engine.ALPHA_ADD;
+        this.laserBeamMatB.disableDepthWrite = true;
+        this.laserBeamMatB.setColor3("beamColor", new BABYLON.Color3(1.0, 0.55, 0.2));
+        this.laserBeamMatB.setFloat("intensity", 1.15);
+        this.laserBeamMatB.setFloat("beamLength", 1);
+        this.laserBeamMatB.setFloat("time", 0);
+
+        this.laserBeamA = this.createLaserBeamCross(scene, "laserBeamA", this.laserBeamMatA, { width: 0.065 });
+        this.laserBeamB = this.createLaserBeamCross(scene, "laserBeamB", this.laserBeamMatB, { width: 0.055 });
     }
 
     toggleLaserControl(target) {
@@ -971,6 +1118,13 @@ export class MapTest extends CreateMap {
     }
 
     updateLaserSystem() {
+        // Animate shader time.
+        if (this.laserBeamMatA && this.laserBeamMatB) {
+            this._laserTime = (this._laserTime || 0) + (this.deltaTime || 0);
+            this.laserBeamMatA.setFloat("time", this._laserTime);
+            this.laserBeamMatB.setFloat("time", this._laserTime);
+        }
+
         const dir = this.getDirectionFromYawPitch(this.laserState.emitterYaw, this.laserState.emitterPitch);
         const start = this.laserEmitter.getAbsolutePosition().add(dir.scale(0.8));
 
@@ -978,10 +1132,9 @@ export class MapTest extends CreateMap {
         const hitA = this.scene.pickWithRay(rayA, (m) => m === this.laserMirror || m === this.laserSensor || m.name === 'northWall' || m.name === 'southWall' || m.name === 'sep2_left' || m.name === 'sep2_right');
 
         const endA = hitA?.hit ? hitA.pickedPoint : start.add(dir.scale(80));
-        BABYLON.MeshBuilder.CreateLines('laserBeamA', {
-            points: [start, endA],
-            instance: this.laserBeamA,
-        }, this.scene);
+        if (this.laserBeamA && this.laserBeamMatA) {
+            this.setLaserBeamSegment(this.laserBeamA, this.laserBeamMatA, start, endA);
+        }
 
         let sensorActive = hitA?.pickedMesh === this.laserSensor;
 
@@ -993,17 +1146,15 @@ export class MapTest extends CreateMap {
             const hitB = this.scene.pickWithRay(rayB, (m) => m === this.laserSensor || m.name === 'northWall' || m.name === 'southWall' || m.name === 'eastWall');
             const endB = hitB?.hit ? hitB.pickedPoint : startB.add(reflected.scale(80));
 
-            BABYLON.MeshBuilder.CreateLines('laserBeamB', {
-                points: [startB, endB],
-                instance: this.laserBeamB,
-            }, this.scene);
+            if (this.laserBeamB && this.laserBeamMatB) {
+                this.setLaserBeamSegment(this.laserBeamB, this.laserBeamMatB, startB, endB);
+            }
 
             sensorActive = sensorActive || hitB?.pickedMesh === this.laserSensor;
         } else {
-            BABYLON.MeshBuilder.CreateLines('laserBeamB', {
-                points: [BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero()],
-                instance: this.laserBeamB,
-            }, this.scene);
+            if (this.laserBeamB) {
+                this.laserBeamB.root.setEnabled(false);
+            }
         }
 
         this.puzzleState.laserSensor = !!sensorActive;
