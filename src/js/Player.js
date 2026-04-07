@@ -499,6 +499,7 @@ export class Player {
             this.updateHeldMeshPos();
             this.isOutOfBound()
         }
+        this.updateFootstepAudio();
 
         // debug
         if (this.input.justPressed["debug"]) {
@@ -513,51 +514,51 @@ export class Player {
             if (this.input.justPressed["KeyO"]) {
                 // this.playerData.canJump = !this.playerData.canJump
             }
-
-            this.input.update()
         }
 
-        updateFootstepAudio() {
-            this.tryUnlockAudioContext();
 
-            const canMove = this.stateMachine.checkIfCanMove();
-            const moveSpeed2D = Math.hypot(this.velocity.x, this.velocity.z);
-            const hasMoveInput =
-                !!this.input?.inputMap?.["KeyW"] ||
-                !!this.input?.inputMap?.["KeyA"] ||
-                !!this.input?.inputMap?.["KeyS"] ||
-                !!this.input?.inputMap?.["KeyD"];
+        this.input.update()
+    }
 
-            const shouldPlay =
-                !this.respawning &&
-                canMove &&
-                (hasMoveInput || moveSpeed2D > 0.2);
+    updateFootstepAudio() {
+        this.tryUnlockAudioContext();
 
-            if (shouldPlay) {
-                this.footstepStepTimer -= this.deltaTime;
-                const interval = this.isSprinting ? this.footstepSprintInterval : this.footstepWalkInterval;
+        const canMove = this.stateMachine.checkIfCanMove();
+        const moveSpeed2D = Math.hypot(this.velocity.x, this.velocity.z);
+        const hasMoveInput =
+            !!this.input?.inputMap?.["KeyW"] ||
+            !!this.input?.inputMap?.["KeyA"] ||
+            !!this.input?.inputMap?.["KeyS"] ||
+            !!this.input?.inputMap?.["KeyD"];
 
-                if (this.footstepStepTimer <= 0) {
-                    this.footstepStepTimer = interval;
-                    try {
-                        if (this.footstepSoundReady && this.footstepSound) {
-                            if (this.footstepSound.isPlaying) {
-                                this.footstepSound.stop();
-                            }
-                            this.footstepSound.play();
-                        } else if (this.playNativeFootstep()) {
-                        } else {
-                            // Aucun sample pret: on attend la prochaine frame.
+        const shouldPlay =
+            canMove &&
+            (hasMoveInput || moveSpeed2D > 0.2);
+
+        if (shouldPlay) {
+            this.footstepStepTimer -= this.deltaTime;
+            const interval = this.isSprinting ? this.footstepSprintInterval : this.footstepWalkInterval;
+
+            if (this.footstepStepTimer <= 0) {
+                this.footstepStepTimer = interval;
+                try {
+                    if (this.footstepSoundReady && this.footstepSound) {
+                        if (this.footstepSound.isPlaying) {
+                            this.footstepSound.stop();
                         }
-                    } catch (error) {
-                        // noop
+                        this.footstepSound.play();
+                    } else if (this.playNativeFootstep()) {
+                    } else {
+                        // Aucun sample pret: on attend la prochaine frame.
                     }
+                } catch (error) {
+                    // noop
                 }
-            } else {
-                this.footstepStepTimer = 0;
             }
-
+        } else {
+            this.footstepStepTimer = 0;
         }
+
     }
 
 
