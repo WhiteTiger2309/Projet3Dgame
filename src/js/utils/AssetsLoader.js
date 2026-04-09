@@ -8,6 +8,7 @@ export class AssetsLoader {
         this.main = main;
         this.assetsManager = new BABYLON.AssetsManager(this.scene);
         this.assetsManager.useDefaultLoadingScreen = false;
+        this.soundPromises = [];
     }
 
     async loadModel(name, file) {
@@ -32,17 +33,19 @@ export class AssetsLoader {
         };
     }
 
-    async loadSound(name, url) {
-        const soundTask = this.assetsManager.addBinaryFileTask(name, url);
-        soundTask.onSuccess = (task) => {
-            const sound = new BABYLON.Sound(name, task.data, this.scene);
+    async loadSound(name, url, loop = false, volume = 1) {
+        const promise = BABYLON.CreateSoundAsync(name, url).then(sound => {
+            sound.loop = loop;
+            sound.volume = volume;
+
             this.main.sounds[name] = sound;
-        };
+        });
+
+        this.soundPromises.push(promise);
     }
 
     async preloadAllAssets() {
-        this.loadImage("ground", "images/hmap.jpeg")
-
+        //////////////////// 3D models ////////////////////
         this.loadModel("puzzleMap1", "puzzleMap1.glb")
         this.loadModel("cave", "cave.glb")
         this.loadModel("robot", "robot.glb")
@@ -55,7 +58,10 @@ export class AssetsLoader {
         this.loadModel("ruinsPuzzleMap", "ruinsPuzzleMap.glb")
         this.loadModel("slime", "slime.glb")
 
+        //////////////////// images ////////////////////
+        this.loadImage("ground", "images/hmap.jpeg")
 
+        //////////////////// materials ////////////////////
         this.loadTexture("asphalt", "/assets/terrain/asphalt_01.jpg", (texture) => {
             const mat = new BABYLON.StandardMaterial("groundMat", this.scene);
             mat.diffuseTexture = texture
@@ -65,7 +71,7 @@ export class AssetsLoader {
             mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
             this.main.materials["ground"] = mat;
         })
-        
+
         const mat = new BABYLON.StandardMaterial("nonElectric", this.scene);
         this.main.materials["nonElectric"] = mat;
         const mat2 = new BABYLON.StandardMaterial("electric", this.scene);
@@ -83,16 +89,24 @@ export class AssetsLoader {
             this.main.materials["spaceSkyAbove"] = mat;
         })
 
+        //////////////////// sounds ////////////////////
+        this.loadSound("footsteps", "/sounds/51124243-footstep-372877.mp3", false, 0.1)
+        this.loadSound("music", "/sounds/main_theme.mp3", true, 0.02)
+
+        ////////////////////////////////////////
         this.assetsManager.onProgress = (remaining, total) => {
             console.log(`Loading: ${total - remaining}/${total}`);
         };
 
-        await new Promise(resolve => {
-            this.assetsManager.onFinish = () => {
-                console.log("All assets loaded");
-                resolve();
-            };
-            this.assetsManager.load();
-        });
+        await Promise.all([
+            new Promise(resolve => {
+                this.assetsManager.onFinish = () => {
+                    console.log("All assets loaded");
+                    resolve();
+                };
+                this.assetsManager.load();
+            }),
+            Promise.all(this.soundPromises)
+        ]);
     }
 }
