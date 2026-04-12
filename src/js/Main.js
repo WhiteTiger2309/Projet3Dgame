@@ -2,6 +2,10 @@ import * as BABYLON from '@babylonjs/core'
 import HavokPhysics from "@babylonjs/havok";
 import '@babylonjs/loaders'
 
+import "@babylonjs/core/Shaders/selectionOutline.fragment";
+import "@babylonjs/core/Shaders/selection.fragment";
+import "@babylonjs/core/Shaders/selection.vertex";
+
 import { addTriggerObservable } from './utils/utils.js';
 import { AssetsLoader } from './utils/AssetsLoader.js';
 
@@ -39,7 +43,7 @@ export class Main {
         this.createBaseLight();
         this.modifySettings();
 
-        await this.assetsLoader.preloadAllAssets()
+        await this.assetsLoader.preloadAllAssets();
         await this.audioEngine.unlockAsync();
 
         this.startGame()
@@ -79,7 +83,7 @@ export class Main {
     async startGame() {
         this.createPlayer();
 
-        this.sounds["music"].play()
+        // this.sounds["music"].play()
 
         this.map = new Map(this);
         await this.map.createMap()

@@ -24,7 +24,10 @@ export class StandState extends State {
             if (this.player.jumpBufferTimer > 0) {
                 this.player.jumpBufferTimer -= this.player.deltaTime;
             }
-            if ((this.player.jumpBufferTimer > 0 && this.player.isGrounded) || (this.player.input.justPressed["jump"] && this.player.coyoteJumpTimer > 0)) {
+            if (this.player.jumpCooldownTimer > 0) {
+                this.player.jumpCooldownTimer -= this.player.deltaTime;
+            }
+            if (this.player.jumpCooldownTimer <= 0 && ((this.player.jumpBufferTimer > 0 && this.player.isGrounded) || (this.player.input.justPressed["jump"] && this.player.coyoteJumpTimer > 0))) {
                 this.player.inheritedVelocity.copyFrom(this.player.supportInfo.averageSurfaceVelocity);
                 this.player.velocity.addInPlace(this.player.inheritedVelocity);
                 if (this.player.velocity.y < 0) {
@@ -37,6 +40,7 @@ export class StandState extends State {
                 this.player.groundDisableTimer = this.player.GROUND_DISABLE_TIME;
                 this.player.jumpBufferTimer = 0;
                 this.player.coyoteJumpTimer = 0
+                this.player.jumpCooldownTimer = this.player.JUMP_COOLDOWN;
             }
         }
     }

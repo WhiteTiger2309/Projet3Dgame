@@ -57,6 +57,10 @@ export class AssetsLoader {
         }
         this.loadModel("ruinsPuzzleMap", "ruinsPuzzleMap.glb")
         this.loadModel("slime", "slime.glb")
+        this.loadModel("wall", "wall.glb")
+        this.loadModel("wallPillar", "wallPillar.glb")
+        this.loadModel("door", "door.glb")
+        this.loadModel("antiBoxGate", "antiBoxGate.glb")
 
         //////////////////// images ////////////////////
         this.loadImage("ground", "images/hmap.jpeg")
@@ -69,7 +73,24 @@ export class AssetsLoader {
             mat.diffuseTexture.vScale = 50;
             mat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
             mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+            mat.diffuseTexture.updateSamplingMode(4)
             this.main.materials["ground"] = mat;
+        })
+
+        this.loadTexture("ground", "/images/ground_diffuse.jpg", (texture) => {
+            const mat = new BABYLON.StandardMaterial("groundMat2", this.scene);
+            mat.diffuseTexture = texture
+            mat.diffuseTexture.uScale = 50;
+            mat.diffuseTexture.vScale = 50;
+            mat.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+            mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+            mat.diffuseTexture.updateSamplingMode(4)
+            mat.bumpTexture = new BABYLON.Texture("images/ground_normal.jpg", this.scene);
+            mat.bumpTexture.level = 1.0;
+            mat.bumpTexture.uScale = 50;
+            mat.bumpTexture.vScale = 50;
+            mat.invertNormalMapX = true;
+            this.main.materials["ground2"] = mat;
         })
 
         const mat = new BABYLON.StandardMaterial("nonElectric", this.scene);

@@ -12,6 +12,7 @@ export class Player {
         this.groundDisableTimer = 0;
         this.jumpBufferTimer = 0;
         this.coyoteJumpTimer = 0;
+        this.jumpCooldownTimer = 0;
         this.velocity = BABYLON.Vector3.Zero();
         this.inheritedVelocity = BABYLON.Vector3.Zero();
         this.heldMesh = null;
@@ -46,6 +47,7 @@ export class Player {
         this.GROUND_DISABLE_TIME = 0.1;
         this.JUMP_BUFFER_TIME = 0.15;
         this.COYOTE_JUMP_TIME = 0.1;
+        this.JUMP_COOLDOWN = 0.4;
         this.GRAPPLING_HOOK_COOLDOWN = 0.3;
 
         this.speed = this.WALK_SPEED;
@@ -59,7 +61,7 @@ export class Player {
         this.createPlayer()
         this.cameraRotation()
 
-        // BUG ICI
+        // BUG ICI  enfait desfois ca ramplace les fichier shader par le html ?? pour resoudre il faut refresh en viant le cache
         this.outliner = new BABYLON.SelectionOutlineLayer("outliner", scene)
         this.outliner.outlineColor = BABYLON.Color3.White()
         this.outliner.outlineThickness = 3.0;
@@ -130,13 +132,14 @@ export class Player {
 
         // debug
         if (this.input.justPressed["debug"]) {
+            const txt = `new BABYLON.Vector3(${this.character._position.x.toFixed(1)}, ${this.character._position.y.toFixed(1)}, ${this.character._position.z.toFixed(1)})`
+            navigator.clipboard.writeText(txt);
             console.log(this.character._position)
             console.log(BABYLON.Tools.ToDegrees(this.head.rotation.y))
             // this.stateMachine.currentState.nextState = this.stateMachine.states.dialog
             // console.log(this.character._position.y)
             // console.log(this.input.inputMap)
             // this.respawn()
-            // console.log(this.map.box.position);
             // console.log(this.velocity.y);
             if (this.input.justPressed["KeyO"]) {
                 // this.playerData.canJump = !this.playerData.canJump
@@ -410,6 +413,7 @@ export class Player {
                 aggregate = this.heldMesh.metadata.boxAggregate;
             }
             aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(2));
+            aggregate.body.setMassProperties({ mass: aggregate._options.mass })
             this.heldMesh = null;
             this.isHoldingMesh = false;
         }

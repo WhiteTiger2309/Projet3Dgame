@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime } from './utils/utils.js';
+import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createButton, openDoor, closeDoor, createDoor, createAntiBoxGate } from './utils/utils.js';
 import { Robot } from './Robot.js';
 import { ElectricPuzzle } from './ElectricPuzzle.js';
 import { Map2 } from './Map2.js';
@@ -24,18 +24,20 @@ export class Map extends CreateMap {
         this.createSkyAboveGround(this.scene);
         this.createShip(placeOnGround(this.ground, 0, 0))
         this.createPuzzleMap(placeOnGround(this.ground, -20, 0))
+
+        this.createOldPuzzleMap(placeOnGround(this.ground, -20, -80))
         this.createCave(placeOnGround(this.ground, 5, -20))
         this.createRuins(placeOnGround(this.ground, -10, 20))
         this.createStructure(placeOnGround(this.ground, 250, -80))
         new Robot(this.main, placeOnGround(this.ground, 0, 10), 1.4)
-        this.createBox(new BABYLON.Vector3(-21, 0.7, 0))
         createMapChangeGate(this.main, Map2, new BABYLON.Vector3(232, 20, -80), new BABYLON.Vector3(0, 2, 0), BABYLON.Tools.ToRadians(90))
-        
-        this.electricPuzzle =  new ElectricPuzzle(this.main, new BABYLON.Vector3(-10, 1, 10))
+
+
+        this.electricPuzzle = new ElectricPuzzle(this.main, new BABYLON.Vector3(10, 1, 10))
     }
 
     mapBeforeRenderUpdate() {
-        this.electricPuzzle.updateElectricity() 
+        this.electricPuzzle.updateElectricity()
     }
 
     createGround(scene) {
@@ -47,18 +49,78 @@ export class Map extends CreateMap {
                 minHeight: -40,
                 maxHeight: 50,
                 onReady: (ground) => {
-                    ground.material = this.main.materials["ground"];
+                    ground.material = this.main.materials["ground2"];
                     addStaticPhysics(ground, "MESH");
                     ground.updateCoordinateHeights()
 
                     resolve(ground);
                 }
             }, scene);
-            const pos = new BABYLON.Vector3(0, 0, 10)
         })
     }
 
     createPuzzleMap(pos) {
+        const level = `
+        .H.H.H.W...E.H.H.H.
+        N.................V
+        ...................
+        V.................V
+        ...................
+        V.................N
+        ...E.H.H.H.W.......
+        N...........V.....V
+        ...................
+        S...........V.....S
+        .H.H.H.H.W...E.H.H.
+        ........V.....V....
+        ...................
+        ........V.....V....
+        ...................
+        ........S.....S....
+        .........W...E.....
+        `;
+        const tileMap = {
+            ".": null,
+            "V": { type: "wall", rot: 0 },
+            "H": { type: "wall", rot: 90 },
+            "D": { type: "doorway", rot: 90 },
+            "N": { type: "wallPillar", rot: 0 },
+            "S": { type: "wallPillar", rot: 180 },
+            "E": { type: "wallPillar", rot: 270 },
+            "W": { type: "wallPillar", rot: 90 },
+        };
+        const rows = level.trim().split("\n").map(row => row.trim());
+
+        const defaultPos = pos.clone()
+        defaultPos.z = defaultPos.z - (rows[0].length * 2.5) / 2
+        defaultPos.x = defaultPos.x - rows.length * 2.5
+
+        for (let i = 0; i < rows.length; i++) {
+            for (let j = 0; j < rows[i].length; j++) {
+                const char = rows[i][j];
+                const tile = tileMap[char];
+                if (!tile) continue;
+                createMeshFromAsset(this.main.assets[tile.type], new BABYLON.Vector3(i * 2.5 + defaultPos.x, 0, j * 2.5 + defaultPos.z), "BOX", tile.rot ? BABYLON.Tools.ToRadians(tile.rot) : 0);
+            }
+        }
+
+        // level 1
+        createBox(this.main, new BABYLON.Vector3(-32, 1, -1))
+        const door1 = createDoor(this.main, new BABYLON.Vector3(-37.5, 0, 4), 90)
+        createButton(this.main, new BABYLON.Vector3(-28, 1, 8), () => openDoor(door1, "x"), () => closeDoor(door1, "x"))
+        
+        // level 2 nul
+        createBox(this.main, new BABYLON.Vector3(-39.2, 1, -2.1))
+        const obstacle = BABYLON.MeshBuilder.CreateBox("obstacle", { width: 5, depth: 3, height: 2 }, this.scene);
+        obstacle.position = new BABYLON.Vector3(-44.5, 1, -4)
+        addStaticPhysics(obstacle, "BOX")
+        createAntiBoxGate(this.main, new BABYLON.Vector3(-39.5, -2.5, -3.8), 0)
+
+        createAntiBoxGate(this.main, new BABYLON.Vector3(-47.5, 0, -21.5), 90)
+        
+    }
+
+    createOldPuzzleMap(pos) {
         createMeshFromAsset(this.main.assets["puzzleMap1"], pos, "MESH")
     }
 
@@ -87,7 +149,7 @@ export class Map extends CreateMap {
 
 
     createShip(pos) {
-        createMeshFromAsset(this.main.assets["ship"], pos, "MESH", false)
+        createMeshFromAsset(this.main.assets["ship"], pos, "MESH", undefined, false)
 
         const door = this.scene.getMeshByName("Door");
         door.metadata.defaultPos = door.position.clone();
@@ -120,24 +182,6 @@ export class Map extends CreateMap {
         }
         door.metadata.isOpen = !door.metadata.isOpen;
     }
-
-    createBox(pos) {
-        this.box = BABYLON.MeshBuilder.CreateBox("box", { width: 1, depth: 1, height: 1 }, this.scene);
-        this.box.position = pos;
-        const boxAggregate = new BABYLON.PhysicsAggregate(this.box, BABYLON.PhysicsShapeType.BOX, { mass: 50.25, friction: 0.75, restitution: 0 }, this.scene);
-        this.box.metadata = {
-            boxAggregate: boxAggregate,
-            isInteractable: true,
-            canBeHeld: true,
-            onInteract: () => {
-                if (!this.player.heldMesh) {
-                    this.player.heldMesh = this.box;
-                }
-            }
-        };
-    }
-
-
 
     createSkyAboveGround(scene) {
         const sky = BABYLON.MeshBuilder.CreateSphere(

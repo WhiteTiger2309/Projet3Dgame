@@ -1,5 +1,5 @@
 import * as BABYLON from '@babylonjs/core'
-import { addStaticPhysics } from './utils/utils.js';
+import { createBox } from './utils/utils.js';
 
 export class ElectricPuzzle {
     constructor(main, pos) {
@@ -21,21 +21,11 @@ export class ElectricPuzzle {
     }
 
     createPuzzle2(pos) {
-        this.box = BABYLON.MeshBuilder.CreateBox("box", { width: 1, depth: 1, height: 1 }, this.scene);
-        this.box.position = pos.clone();
-        this.box.position.z -= 3.5
+        const pos2 = pos.clone();
 
-        const boxAggregate = new BABYLON.PhysicsAggregate(this.box, BABYLON.PhysicsShapeType.BOX, { mass: 50.25, friction: 0.75, restitution: 0 }, this.scene);
-        this.box.metadata = {
-            boxAggregate: boxAggregate,
-            isInteractable: true,
-            canBeHeld: true,
-            onInteract: () => {
-                if (!this.main.player.heldMesh) {
-                    this.main.player.heldMesh = this.box;
-                }
-            }
-        };
+        pos2.z -= 3.5 
+        this.box = createBox(this.main, pos2, 1)
+
         this.conductiveObjects.push(this.box)
 
     }
