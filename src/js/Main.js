@@ -43,7 +43,9 @@ export class Main {
         this.modifySettings();
 
         await this.assetsLoader.preloadAllAssets()
-        await this.audioEngine.unlockAsync();
+        // Ne pas bloquer le démarrage sur les contraintes autoplay.
+        // SoundManager tentera l'unlock + lecture sur geste utilisateur.
+        this.audioEngine.unlockAsync().catch(() => {});
 
         this.sound = new SoundManager(this)
         this.sound.init()
@@ -84,8 +86,6 @@ export class Main {
 
     async startGame() {
         this.createPlayer();
-
-        this.sounds["music"].play()
 
         this.map = new Map(this);
         await this.map.createMap()
