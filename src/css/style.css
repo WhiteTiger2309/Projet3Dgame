@@ -84,3 +84,8 @@ html, body {
 #respawnOverlay.fade-out {
     animation: respawnFadeOut 0.8s normal;
 }
+
+
+#babylonUnmuteButton  {
+	display: none !important;
+}

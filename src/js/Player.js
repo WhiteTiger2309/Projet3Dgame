@@ -133,7 +133,8 @@ export class Player {
             this.updateHeldMeshPos();
             this.isOutOfBound()
         }
-        this.updateFootstepAudio();
+        
+        this.updateFootstepAudio(deltaTime);
 
         // debug
         if (this.input.justPressed["debug"]) {

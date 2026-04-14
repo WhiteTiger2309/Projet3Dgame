@@ -4,11 +4,6 @@ import '@babylonjs/loaders'
 
 import { addTriggerObservable } from './utils/utils.js';
 import { AssetsLoader } from './utils/AssetsLoader.js';
-import '@babylonjs/core/Audio/audioEngine';
-import '@babylonjs/core/Audio/audioSceneComponent';
-import '@babylonjs/core/Audio/sound';
-import '@babylonjs/core/Audio/soundTrack';
-import '@babylonjs/core/Misc/assetsManager';
 
 import { Map } from './Map.js';
 import { Map2 } from './Map2.js';
@@ -40,12 +35,15 @@ export class Main {
     async initGame() {
         this.havokInstance = await HavokPhysics();
         this.havokPlugin = new BABYLON.HavokPlugin(true, this.havokInstance);
+        this.audioEngine = await BABYLON.CreateAudioEngineAsync();
 
         this.scene = this.createScene()
         this.assetsLoader = new AssetsLoader(this)
         this.createBaseLight();
         this.modifySettings();
+
         await this.assetsLoader.preloadAllAssets()
+        await this.audioEngine.unlockAsync();
 
         this.sound = new SoundManager(this)
         this.sound.init()
@@ -86,6 +84,8 @@ export class Main {
 
     async startGame() {
         this.createPlayer();
+
+        this.sounds["music"].play()
 
         this.map = new Map(this);
         await this.map.createMap()
