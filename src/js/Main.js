@@ -14,6 +14,7 @@ import { Map } from './Map.js';
 import { Map2 } from './Map2.js';
 import { MapTest } from './Map_test.js';
 import { Player } from './Player.js';
+import { SoundManager } from './utils/SoundManager.js';
 
 export class Main {
 
@@ -25,6 +26,8 @@ export class Main {
         this.materials = {}
         this.images = {}
         this.sounds = {}
+        this.soundBuffers = {}
+        this.sound = null
         this.player = null
         this.observer = null
         this.ray = new BABYLON.Ray(BABYLON.Vector3.Zero(), new BABYLON.Vector3(0, -1, 0), 2);
@@ -43,6 +46,9 @@ export class Main {
         this.createBaseLight();
         this.modifySettings();
         await this.assetsLoader.preloadAllAssets()
+
+        this.sound = new SoundManager(this)
+        this.sound.init()
 
         this.startGame()
         addTriggerObservable(this.havokPlugin, this)

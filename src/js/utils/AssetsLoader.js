@@ -35,9 +35,29 @@ export class AssetsLoader {
     async loadSound(name, url) {
         const soundTask = this.assetsManager.addBinaryFileTask(name, url);
         soundTask.onSuccess = (task) => {
-            const sound = new BABYLON.Sound(name, task.data, this.scene);
-            this.main.sounds[name] = sound;
+            if (!this.main.soundBuffers) {
+                this.main.soundBuffers = {};
+            }
+
+            let audioData = task.data;
+            try {
+                audioData = this.normalizeBinaryAudioData(task.data);
+            } catch {
+                // Keep original data if normalization fails.
+            }
+
+            this.main.soundBuffers[name] = audioData;
         };
+    }
+
+    normalizeBinaryAudioData(data) {
+        if (!data) return data;
+        if (data instanceof ArrayBuffer) return data;
+        if (ArrayBuffer.isView(data)) {
+            const view = data;
+            return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+        }
+        return data;
     }
 
     async preloadAllAssets() {
@@ -82,6 +102,11 @@ export class AssetsLoader {
             mat.backFaceCulling = false;
             this.main.materials["spaceSkyAbove"] = mat;
         })
+
+        // Audio buffers preloaded for SoundManager (music + footsteps).
+        this.loadSound("ambientMusic", "/sounds/main_theme.mp3");
+        this.loadSound("footstep_0", "/sounds/51124243-footstep-372877.mp3");
+        this.loadSound("footstep_1", "/sounds/footstep-safe.wav");
 
         this.assetsManager.onProgress = (remaining, total) => {
             console.log(`Loading: ${total - remaining}/${total}`);
