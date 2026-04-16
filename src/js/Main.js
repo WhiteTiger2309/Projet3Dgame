@@ -8,6 +8,7 @@ import { AssetsLoader } from './utils/AssetsLoader.js';
 import { Map } from './Map.js';
 import { Map2 } from './Map2.js';
 import { MapTest } from './Map_test.js';
+import { MapLazer } from './Map_lazer.js';
 import { Player } from './Player.js';
 import { SoundManager } from './utils/SoundManager.js';
 
