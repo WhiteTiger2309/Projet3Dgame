@@ -14,7 +14,7 @@ export class CreateMap {
 
         this.createLights(this.scene)
         this.changeSceneBackground(this.scene)
-        this.setupFog();
+        // this.setupFog();
 
         // Medium bloom for neon accents (post-process on the player camera). desactivé car réduit la qualité
         // this.setupNeonBloom();

@@ -14,6 +14,7 @@ export function addStaticPhysics(mesh, shapeName) {
 
 /**
  * Create a gate to change map.
+ * @param main {Main} - The instance of the class Main
  * @param map {Map} - The map to change to
  * @param gatePos {Vector3} - The position of the gate
  * @param playerSpawnPos {Vector3} - The position of the player spawn
@@ -28,15 +29,10 @@ export function createMapChangeGate(main, map, gatePos, playerSpawnPos, gateRota
     gate.rotationQuaternion = null
     gate.rotation.y = gateRotation
     gate.getDescendants().forEach(mesh => {
-        if (mesh.metadata?.gltf?.extras.collisions) {
-            mesh.metadata.aggregate = addStaticPhysics(mesh, "MESH")
-        }
-        if (mesh.name == "mapChangeTrigger") {
-            mesh.isVisible = false;
-            trigger = mesh
-            const triggerAggregate = addStaticPhysics(mesh, "BOX");
-            triggerAggregate.shape.isTrigger = true;
-        }
+        mesh.isVisible = false;
+        trigger = mesh
+        const triggerAggregate = addStaticPhysics(mesh, "BOX");
+        triggerAggregate.shape.isTrigger = true;
     });
 
     trigger.metadata = {
@@ -65,29 +61,33 @@ export function createBounceSlime(main, pos) {
 export function createBox(main, pos, size) {
     const box = BABYLON.MeshBuilder.CreateBox("box", { width: size, depth: size, height: size }, main.scene);
     box.position = pos;
+    return createGrabbableObject(main, pos, box);
+}
+
+export function createGrabbableObject(main, pos, mesh) {
     const defaultPos = pos.clone()
-    const boxAggregate = new BABYLON.PhysicsAggregate(box, BABYLON.PhysicsShapeType.BOX, { mass: 1000, friction: 0.75, restitution: 0 }, main.scene);
-    box.metadata = {
-        boxAggregate: boxAggregate,
+    const meshAggregate = new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.BOX, { mass: 1000, friction: 0.75, restitution: 0 }, main.scene);
+    mesh.metadata = {
+        meshAggregate: meshAggregate,
         isInteractable: true,
         canBeHeld: true,
         onInteract: () => {
             if (!main.player.heldMesh) {
-                main.player.heldMesh = box;
-                boxAggregate.body.setMassProperties({ mass: 2 })
+                main.player.heldMesh = mesh;
+                meshAggregate.body.setMassProperties({ mass: 2 })
             }
         },
         respawn: () => {
-            boxAggregate.body.disablePreStep = false;
-            main.player.dropHeldMesh(boxAggregate)
-            boxAggregate.body.setLinearVelocity(0)
+            meshAggregate.body.disablePreStep = false;
+            main.player.dropHeldMesh(meshAggregate)
+            meshAggregate.body.setLinearVelocity(0)
             pos.copyFrom(defaultPos)
             setTimeout(() => {
-                boxAggregate.body.disablePreStep = true;
+                meshAggregate.body.disablePreStep = true;
             }, 100)
         }
     };
-    return box
+    return mesh
 }
 
 
@@ -118,16 +118,16 @@ export function createButton(main, pos, activateFunc, deactivateFunc) {
     triggerAggregate.shape.isTrigger = true;
 }
 
-export function openDoor(door, dir) {
+export function openDoor(door, dir, distance = 5) {
     door.metadata.aggregate.body.disablePreStep = false;
     BABYLON.Animation.CreateAndStartAnimation(
         "doorOpen",
         door,
         `position.${dir}`,
         60,
-        10,
+        60,
         door.position[dir],
-        door.metadata.defaultPos[dir] + 5,
+        door.metadata.defaultPos[dir] + distance,
         BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
         undefined,
         () => {
@@ -143,7 +143,7 @@ export function closeDoor(door, dir) {
         door,
         `position.${dir}`,
         60,
-        10,
+        60,
         door.position[dir],
         door.metadata.defaultPos[dir],
         BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
@@ -160,6 +160,13 @@ export function addTriggerObservable(havokPlugin, main) {
 
         const colliderData = ev.collider.transformNode.metadata
         const collidedData = ev.collidedAgainst.transformNode.metadata
+
+        if ((ev.collider.transformNode.name === "accesCard" && ev.collidedAgainst.transformNode.name === "cardReaderTrigger") && ev.type === "TRIGGER_ENTERED") {
+            const doorsOpen = main.scene.getAnimationGroupByName("DoorOpening")
+            doorsOpen.play()
+            ev.collidedAgainst.dispose();
+        }
+
         if ((ev.collider.transformNode.name === "box" && ev.collidedAgainst.transformNode.name === "AntiBoxGate") && ev.type === "TRIGGER_ENTERED") {
             colliderData.respawn()
         }
@@ -169,7 +176,6 @@ export function addTriggerObservable(havokPlugin, main) {
         }
 
         if ((ev.collider.transformNode.name === "CCTransformNode" && ev.collidedAgainst.transformNode.name === "bounceTrigger") && ev.type === "TRIGGER_ENTERED") {
-            console.log(main.player.velocity.y)
             if (main.player.velocity.y < -3) {
                 main.player.velocity.y = main.player.velocity.y * -1.2 - 2.5;
                 main.player.isGrounded = false;
@@ -226,6 +232,7 @@ export function fade(func) {
  * @param spawnRotation {Vector3} - The rotation of the player spawn
  */
 export async function changeMap(mapToLoad, main, spawnPos, spawnRotation) {
+    main.player.dropHeldMesh();
     main.scene.meshes.filter(mesh => mesh.name !== "grapplingHook").forEach(mesh => mesh.dispose());
     main.scene.lights.filter(light => light.name !== "hemi").forEach(light => light.dispose());
     while (main.scene.animationGroups.length) {

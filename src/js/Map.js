@@ -4,7 +4,7 @@ import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createButton, openDoor, closeDoor, createDoor, createAntiBoxGate } from './utils/utils.js';
 import { Robot } from './Robot.js';
 import { ElectricPuzzle } from './ElectricPuzzle.js';
-import { Map2 } from './Map2.js';
+import { MapStart } from './MapStart.js';
 
 export class Map extends CreateMap {
     constructor(main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
@@ -30,7 +30,7 @@ export class Map extends CreateMap {
         this.createRuins(placeOnGround(this.ground, -10, 20))
         this.createStructure(placeOnGround(this.ground, 250, -80))
         new Robot(this.main, placeOnGround(this.ground, 0, 10), 1.4)
-        createMapChangeGate(this.main, Map2, new BABYLON.Vector3(232, 20, -80), new BABYLON.Vector3(0, 2, 0), BABYLON.Tools.ToRadians(90))
+        createMapChangeGate(this.main, MapStart, new BABYLON.Vector3(10, 0, 0), new BABYLON.Vector3(0, 2, 0), BABYLON.Tools.ToRadians(90))
 
 
         this.electricPuzzle = new ElectricPuzzle(this.main, new BABYLON.Vector3(10, 1, 10))
@@ -49,7 +49,7 @@ export class Map extends CreateMap {
                 minHeight: -40,
                 maxHeight: 50,
                 onReady: (ground) => {
-                    ground.material = this.main.materials["ground2"];
+                    ground.material = this.main.materials["ground"];
                     addStaticPhysics(ground, "MESH");
                     ground.updateCoordinateHeights()
 

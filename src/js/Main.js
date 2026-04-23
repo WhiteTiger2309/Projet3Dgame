@@ -10,7 +10,8 @@ import { addTriggerObservable } from './utils/utils.js';
 import { AssetsLoader } from './utils/AssetsLoader.js';
 
 import { Map } from './Map.js';
-import { Map2 } from './Map2.js';
+import { MapStart } from './MapStart.js';
+import { MapLab } from './MapLab.js';
 import { MapTest } from './Map_test.js';
 import { Player } from './Player.js';
 
@@ -61,8 +62,8 @@ export class Main {
     }
 
     createBaseLight() {
-        const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), this.scene);
-        hemi.intensity = 0.75;
+        this.mainLight = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), this.scene);
+        this.mainLight.intensity = 0.75;
     }
 
     modifySettings() {
@@ -84,8 +85,10 @@ export class Main {
         this.createPlayer();
 
         // this.sounds["music"].play()
+        // const ssao = new BABYLON.SSAO2RenderingPipeline('ssaopipeline', this.scene, { ssaoRatio: 0.5, blurRatio: 1.0 }, this.player.camera);
 
-        this.map = new Map(this);
+        // this.map = new MapStart(this);
+        this.map = new MapLab(this);
         await this.map.createMap()
         this.scene.registerBeforeRender(() => {
             this.map.beforeRenderUpdate();

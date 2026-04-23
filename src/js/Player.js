@@ -70,7 +70,7 @@ export class Player {
     }
 
     createPlayer() {
-        let playerHeight = 1.9;
+        let playerHeight = 2.3;
         let playerWidth = 0.7;
 
         this.player = new BABYLON.TransformNode("player", this.scene);
@@ -78,7 +78,7 @@ export class Player {
 
         this.player.position.copyFrom(this.respawnPos);
 
-        this.character = new BABYLON.PhysicsCharacterController(this.respawnPos, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
+        this.character = new BABYLON.PhysicsCharacterController(this.respawnPos, { capsuleHeight: (playerHeight - 0.2), capsuleRadius: (playerWidth / 2) }, this.scene);
 
         this.head = new BABYLON.TransformNode("head", this.scene);
         this.head.position.y = 0.7;
@@ -354,7 +354,9 @@ export class Player {
                 return (!(mesh === this.heldMesh) && mesh.physicsBody && !(mesh.physicsBody?.shape.isTrigger));
             });
             if (pickInfo.hit) {
-                this.hand.position.z = Math.max(pickInfo.distance - 0.5, 1)
+                const size = this.heldMesh.getBoundingInfo().boundingBox.extendSize
+                const minDimension = Math.min(size.x, size.y, size.z);
+                this.hand.position.z = Math.max(pickInfo.distance - minDimension, 1)
             }
             else {
                 this.hand.position.z = 3
@@ -365,7 +367,7 @@ export class Player {
     // PAS TOP
     updateFootRay() {
         if (this.input.justPressed["jump"] && this.heldMesh) {
-            const aggregate = this.heldMesh.metadata.boxAggregate
+            const aggregate = this.heldMesh.metadata.meshAggregate
             const forward = this.head.getDirection(BABYLON.Axis.Z).scale(0.35);
             this.footRay.origin.copyFrom(this.character._position);
             const pickInfo = this.scene.pickWithRay(this.footRay, (mesh) => {
@@ -395,7 +397,7 @@ export class Player {
             this.highlight.removeAllMeshes()
             this.outliner.clearSelection();
 
-            const aggregate = this.heldMesh.metadata.boxAggregate;
+            const aggregate = this.heldMesh.metadata.meshAggregate;
             aggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
             aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(20));
 
@@ -410,7 +412,7 @@ export class Player {
     dropHeldMesh(aggregate) {
         if (this.heldMesh) {
             if (aggregate == undefined) {
-                aggregate = this.heldMesh.metadata.boxAggregate;
+                aggregate = this.heldMesh.metadata.meshAggregate;
             }
             aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(2));
             aggregate.body.setMassProperties({ mass: aggregate._options.mass })
