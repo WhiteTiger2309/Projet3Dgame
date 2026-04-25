@@ -97,7 +97,7 @@ export class Main {
     }
 
     createPlayer() {
-        this.player = new Player(this.scene, this)
+        this.player = new Player(this)
     }
 
     startRender() {

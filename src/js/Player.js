@@ -3,10 +3,11 @@ import * as BABYLON from '@babylonjs/core'
 import { PlayerInput } from "./PlayerInput.js";
 import { StateMachine } from "./playerStates/StateMachine.js";
 import { fade } from './utils/utils.js';
+import { ConnectionManager } from './ConnectionManager.js';
 
 export class Player {
 
-    constructor(scene, main) {
+    constructor(main) {
         this.isGrounded = false;
         this.lowFriction = false;
         this.groundDisableTimer = 0;
@@ -26,7 +27,7 @@ export class Player {
         this.respawnPos = new BABYLON.Vector3(0, 4.5, 0)
         this.respawnRotation = 0
 
-        this.scene = scene;
+        this.scene = main.scene;
         this.main = main
         this.playerData = {
             canHoldMeshes: true,
@@ -53,7 +54,7 @@ export class Player {
         this.speed = this.WALK_SPEED;
         this.fov = this.BASE_FOV
 
-        this.highlight = new BABYLON.HighlightLayer("highlight", scene);
+        this.highlight = new BABYLON.HighlightLayer("highlight", this.scene);
         this.highlight.innerGlow = false
         this.highlight.blurHorizontalSize = 0.8
         this.highlight.blurVerticalSize = 0.8
@@ -62,11 +63,14 @@ export class Player {
         this.cameraRotation()
 
         // BUG ICI  enfait desfois ca ramplace les fichier shader par le html ?? pour resoudre il faut refresh en viant le cache
-        this.outliner = new BABYLON.SelectionOutlineLayer("outliner", scene)
+        this.outliner = new BABYLON.SelectionOutlineLayer("outliner", this.scene)
         this.outliner.outlineColor = BABYLON.Color3.White()
         this.outliner.outlineThickness = 3.0;
 
-        this.input = new PlayerInput(scene);
+        this.input = new PlayerInput(this.scene);
+
+        this.connectionManager = new ConnectionManager(main, this)
+        this.firstSelected = null;
     }
 
     createPlayer() {
@@ -121,7 +125,8 @@ export class Player {
         this.updateFromControls();
         this.stateMachine.update();
         if (this.stateMachine.checkIfCanMove()) {
-            this.grapplingHook();
+            // this.grapplingHook();
+            this.connectionManager.update()
             this.updateFootRay()
             this.updateRayPos(this.pickRay);
             this.checkPickRayHit();

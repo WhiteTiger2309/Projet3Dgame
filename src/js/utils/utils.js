@@ -90,70 +90,6 @@ export function createGrabbableObject(main, pos, mesh) {
     return mesh
 }
 
-
-
-export function createButton(main, pos, activateFunc, deactivateFunc) {
-    const button = BABYLON.MeshBuilder.CreateBox("button", { width: 1.5, depth: 1.5, height: 0.2 }, main.scene);
-    const defaultPos = placeOnMesh(main, pos)
-    button.position = defaultPos;
-    const meshAggregate = addStaticPhysics(button, "BOX")
-    meshAggregate.body.disablePreStep = false;
-
-    const triggerPos = defaultPos.clone().addInPlace(new BABYLON.Vector3(0, +0.25, 0));
-    const buttonTrigger = BABYLON.MeshBuilder.CreateBox("buttonTrigger", { width: 1.48, depth: 1.48, height: 0.05 }, main.scene);
-    buttonTrigger.position = triggerPos;
-    buttonTrigger.isVisible = false;
-    buttonTrigger.metadata = {
-        numberOfTriggered: 0,
-        activateButton: () => {
-            button.position = defaultPos.clone().addInPlace(new BABYLON.Vector3(0, -0.08, 0));
-            activateFunc();
-        },
-        deactivateButton: () => {
-            button.position = defaultPos.clone()
-            deactivateFunc();
-        }
-    };
-    const triggerAggregate = addStaticPhysics(buttonTrigger, "BOX");
-    triggerAggregate.shape.isTrigger = true;
-}
-
-export function openDoor(door, dir, distance = 5) {
-    door.metadata.aggregate.body.disablePreStep = false;
-    BABYLON.Animation.CreateAndStartAnimation(
-        "doorOpen",
-        door,
-        `position.${dir}`,
-        60,
-        60,
-        door.position[dir],
-        door.metadata.defaultPos[dir] + distance,
-        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
-        undefined,
-        () => {
-            door.metadata.aggregate.body.disablePreStep = true;
-        }
-    );
-}
-
-export function closeDoor(door, dir) {
-    door.metadata.aggregate.body.disablePreStep = false;
-    BABYLON.Animation.CreateAndStartAnimation(
-        "doorClose",
-        door,
-        `position.${dir}`,
-        60,
-        60,
-        door.position[dir],
-        door.metadata.defaultPos[dir],
-        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
-        undefined,
-        () => {
-            door.metadata.aggregate.body.disablePreStep = true;
-        }
-    );
-}
-
 export function addTriggerObservable(havokPlugin, main) {
     havokPlugin.onTriggerCollisionObservable.add((ev) => {
         // console.log(ev.type, ':', ev.collider.transformNode.name, '-', ev.collidedAgainst.transformNode.name);
@@ -183,17 +119,17 @@ export function addTriggerObservable(havokPlugin, main) {
             }
         }
 
-        if (ev.collider.transformNode.name === "buttonTrigger" || ev.collidedAgainst.transformNode.name === "buttonTrigger") {
+        if (ev.collider.transformNode.name === "pressurePlateTrigger" || ev.collidedAgainst.transformNode.name === "pressurePlateTrigger") {
             if (ev.type === "TRIGGER_ENTERED") {
                 collidedData.numberOfTriggered += 1;
                 if (collidedData.numberOfTriggered === 1) {
-                    collidedData.activateButton();
+                    collidedData.activatePressurePlate();
                 }
             }
             else if (ev.type === "TRIGGER_EXITED") {
                 collidedData.numberOfTriggered -= 1;
                 if (collidedData.numberOfTriggered === 0) {
-                    collidedData.deactivateButton();
+                    collidedData.deactivatePressurePlate();
                 }
             }
         }
@@ -289,12 +225,6 @@ export function createMeshFromAsset(asset, pos, collisionsShape, rotation, allCo
         }
     })
     return root
-}
-
-export function createDoor(main, pos, rotation) {
-    const door = createMeshFromAsset(main.assets["door"], pos, "BOX", BABYLON.Tools.ToRadians(rotation))._children[0]
-    door.metadata.defaultPos = door.position.clone()
-    return door
 }
 
 export function createAntiBoxGate(main, pos, rotation) {

@@ -15,6 +15,7 @@ export class PlayerInput {
             "KeyD": "right",
             "Space": "jump",
             "KeyE": "interact",
+            "KeyQ": "switchMode",
             "KeyC": "debug"
         };
 

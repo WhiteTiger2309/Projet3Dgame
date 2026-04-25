@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createButton, openDoor, closeDoor, createDoor, createAntiBoxGate } from './utils/utils.js';
+import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createAntiBoxGate } from './utils/utils.js';
 import { Robot } from './Robot.js';
 import { ElectricPuzzle } from './ElectricPuzzle.js';
 import { MapStart } from './MapStart.js';

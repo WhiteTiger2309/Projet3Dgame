@@ -1,8 +1,13 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createButton, openDoor, closeDoor, createDoor } from './utils/utils.js';
+import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox } from './utils/utils.js';
 import { Map } from './Map.js';
+import { Robot } from './Robot.js';
+
+import { PressurePlate } from './ConnectableObjects/PressurePlate.js';
+import { Door } from './ConnectableObjects/Door.js';
+import { Button } from './ConnectableObjects/Button.js';
 
 export class MapLab extends CreateMap {
     constructor(main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
@@ -20,8 +25,12 @@ export class MapLab extends CreateMap {
 
     async createMap() {
         this.createLab(new BABYLON.Vector3(0, 0, 0));
-        const door1 = createDoor(this.main, new BABYLON.Vector3(9.3, 0, -4.9), 0)
-        createButton(this.main, new BABYLON.Vector3(2.3, 1.1, -0.8), () => openDoor(door1, "y", 3), () => closeDoor(door1, "y"))
+        new Robot(this.main, new BABYLON.Vector3(-0.4, 1.1, -12.9), 180)
+        const door1 = new Door(this.main, new BABYLON.Vector3(9.3, 0, -4.9), 0, true, "y", 3)
+        const door2 = new Door(this.main, new BABYLON.Vector3(6.4, 0, 6.1), 90, true, "y", 3)
+        new PressurePlate(this.main, new BABYLON.Vector3(2.3, 1.1, -0.8), 0, true)
+        new Button(this.main, new BABYLON.Vector3(-0.1, 1.1, -0.3), 90, true, door1)
+        new Button(this.main, new BABYLON.Vector3(11.7, 1.1, 2.8), 0, true)
     }
 
     mapBeforeRenderUpdate() {

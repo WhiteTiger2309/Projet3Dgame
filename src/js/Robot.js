@@ -1,13 +1,13 @@
 import * as BABYLON from '@babylonjs/core'
-import { addStaticPhysics } from './utils/utils.js';
+import { addStaticPhysics, placeOnMesh } from './utils/utils.js';
 
 
 export class Robot {
     constructor(main, pos, rotation) {
         this.scene = main.scene
         this.main = main
-        this.pos = pos
-        this.rotation = rotation
+        this.pos = placeOnMesh(main, pos)
+        this.rotation = BABYLON.Tools.ToRadians(rotation)
         this.root
 
         this.importRobot()
