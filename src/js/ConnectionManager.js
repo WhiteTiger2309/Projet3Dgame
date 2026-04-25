@@ -51,11 +51,13 @@ export class ConnectionManager {
         })
     }
     exitConnectionMode() {
+        this.firstSelected = null;
         this.isInConnectionMode = false
         this.highlightLayer.removeAllMeshes();
         this.lines.forEach(line => {
             line.mesh.isVisible = false
         })
+        this.previewLine.isVisible = false
     }
 
     interactionUpdate() {
@@ -138,6 +140,9 @@ export class ConnectionManager {
         const line = BABYLON.MeshBuilder.CreateLines("connectionLine", { points: points, updatable: true }, this.scene);
 
         line.color = new BABYLON.Color3(1, 1, 0);
+        if (!this.isInConnectionMode) {
+            line.isVisible = false
+        }
 
         this.lines.push({ mesh: line, a: a, b: b });
     }

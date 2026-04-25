@@ -27,7 +27,6 @@ export class MapLab extends CreateMap {
         this.createLab(new BABYLON.Vector3(0, 0, 0));
         new Robot(this.main, new BABYLON.Vector3(-0.4, 1.1, -12.9), 180)
         const door1 = new Door(this.main, new BABYLON.Vector3(9.3, 0, -4.9), 0, true, "y", 3)
-        const door2 = new Door(this.main, new BABYLON.Vector3(6.4, 0, 6.1), 90, true, "y", 3)
         new PressurePlate(this.main, new BABYLON.Vector3(2.3, 1.1, -0.8), 0, true)
         new Button(this.main, new BABYLON.Vector3(-0.1, 1.1, -0.3), 90, true, door1)
         new Button(this.main, new BABYLON.Vector3(11.7, 1.1, 2.8), 0, true)
