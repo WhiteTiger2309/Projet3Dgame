@@ -19,6 +19,11 @@ export class ConnectionManager {
         this.ray = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero(), 20);
 
         this.highlightLayer = new BABYLON.HighlightLayer("hl", this.scene);
+
+        this.outliner = new BABYLON.SelectionOutlineLayer("outliner", this.scene)
+        this.outliner.outlineColor = BABYLON.Color3.White()
+        this.outliner.outlineThickness = 3.0;
+
     }
 
     update() {
@@ -61,22 +66,27 @@ export class ConnectionManager {
     }
 
     interactionUpdate() {
-        if (this.player.input.justPressed["mouseLeft"] && !this.player.isHoldingMesh && this.scene.alreadyLocked) {
-            this.player.updateRayPos(this.ray)
-            const pickInfo = this.updatePickInfo(this.ray)
+        this.player.updateRayPos(this.ray)
+        const pickInfo = this.updatePickInfo(this.ray)
+        if (!this.player.isHoldingMesh) {
             if (pickInfo.hit && pickInfo.pickedMesh?.metadata?.connectable) {
                 const obj = pickInfo.pickedMesh.metadata.connectable;
                 if (obj.canBeRewired) {
-                    this.select(obj);
+                    // effet sur le mesh a changer pour cercle surement
+                    this.outliner.addSelection(pickInfo.pickedMesh);
+                    if (this.player.input.justPressed["mouseLeft"] && this.scene.alreadyLocked) {
+                        this.select(obj);
+                    }
                 }
+            }
+            else {
+                this.outliner.clearSelection();
             }
         }
         if (this.firstSelected) {
-            this.player.updateRayPos(this.ray);
-            const pickInfo = this.updatePickInfo(this.ray)
             this.previewLine.isVisible = true
             const start = this.firstSelected.mesh.getAbsolutePosition();
-            const end = pickInfo.pickedPoint
+            const end = pickInfo.pickedPoint ?? this.ray.origin.add(this.ray.direction.scale(10));
 
             const points = [start, end];
             BABYLON.MeshBuilder.CreateLines(null, { points: points, instance: this.previewLine });

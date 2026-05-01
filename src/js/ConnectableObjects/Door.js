@@ -15,11 +15,12 @@ export class Door extends Destination{
     createMesh(pos, rotation) {
         const door = createMeshFromAsset(this.main.assets["door"], pos, "BOX", BABYLON.Tools.ToRadians(rotation))._children[0]
         door.metadata.connectable = this;
+        door.metadata.aggregate.body.disablePreStep = false;
         return door
     }
 
     activate() {
-        this.mesh.metadata.aggregate.body.disablePreStep = false;
+        const body = this.mesh.metadata.aggregate.body;
         BABYLON.Animation.CreateAndStartAnimation(
             "doorOpen",
             this.mesh,
@@ -30,14 +31,10 @@ export class Door extends Destination{
             this.defaultPos[this.direction] + this.distance,
             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
             undefined,
-            () => {
-                this.mesh.metadata.aggregate.body.disablePreStep = true;
-            }
         );
     }
 
     deactivate() {
-        this.mesh.metadata.aggregate.body.disablePreStep = false;
         BABYLON.Animation.CreateAndStartAnimation(
             "doorClose",
             this.mesh,
@@ -48,9 +45,6 @@ export class Door extends Destination{
             this.defaultPos[this.direction],
             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
             undefined,
-            () => {
-                this.mesh.metadata.aggregate.body.disablePreStep = true;
-            }
         );
     }
 

@@ -25,7 +25,7 @@ export class MapStart extends CreateMap {
         await this.createLandscapeGround(this.scene);
         this.createTerrain(new BABYLON.Vector3(30, 1, 20));
         this.createDoors(new BABYLON.Vector3(30, 1, 20));
-        this.createCard(new BABYLON.Vector3(37.8, 3, -17.2))
+        // this.createCard(new BABYLON.Vector3(37.8, 3, -17.2))
 
         this.createShip(placeOnMesh(this.main, new BABYLON.Vector3(35.4, 7.7, 40.3)), BABYLON.Tools.ToRadians(90))
         createMapChangeGate(this.main, MapLab, new BABYLON.Vector3(29, 0, -20.8), undefined, BABYLON.Tools.ToRadians(180))
@@ -52,13 +52,13 @@ export class MapStart extends CreateMap {
         })
         const doorsOpen = this.scene.getAnimationGroupByName("DoorOpening")
         doorsOpen.stop();
-        // doorsOpen.play();
+        doorsOpen.play();
     }
 
-    createCard(pos) {
-        const card = createMeshFromAsset(this.main.assets["accesCard"], pos, "BOX", undefined, false).getDescendants()[0]
-        createGrabbableObject(this.main, pos, card)
-    }
+    // createCard(pos) {
+    //     const card = createMeshFromAsset(this.main.assets["accesCard"], pos, "BOX", undefined, false).getDescendants()[0]
+    //     createGrabbableObject(this.main, pos, card)
+    // }
 
 
     createLandscapeGround(scene) {

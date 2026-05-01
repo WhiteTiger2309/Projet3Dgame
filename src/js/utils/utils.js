@@ -97,11 +97,11 @@ export function addTriggerObservable(havokPlugin, main) {
         const colliderData = ev.collider.transformNode.metadata
         const collidedData = ev.collidedAgainst.transformNode.metadata
 
-        if ((ev.collider.transformNode.name === "accesCard" && ev.collidedAgainst.transformNode.name === "cardReaderTrigger") && ev.type === "TRIGGER_ENTERED") {
-            const doorsOpen = main.scene.getAnimationGroupByName("DoorOpening")
-            doorsOpen.play()
-            ev.collidedAgainst.dispose();
-        }
+        // if ((ev.collider.transformNode.name === "accesCard" && ev.collidedAgainst.transformNode.name === "cardReaderTrigger") && ev.type === "TRIGGER_ENTERED") {
+        //     const doorsOpen = main.scene.getAnimationGroupByName("DoorOpening")
+        //     doorsOpen.play()
+        //     ev.collidedAgainst.dispose();
+        // }
 
         if ((ev.collider.transformNode.name === "box" && ev.collidedAgainst.transformNode.name === "AntiBoxGate") && ev.type === "TRIGGER_ENTERED") {
             colliderData.respawn()
