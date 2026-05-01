@@ -169,7 +169,7 @@ export function fade(func) {
  */
 export async function changeMap(mapToLoad, main, spawnPos, spawnRotation) {
     main.player.dropHeldMesh();
-    main.scene.meshes.filter(mesh => mesh.name !== "grapplingHook").forEach(mesh => mesh.dispose());
+    main.scene.meshes.filter(mesh => mesh.name !== "preview").forEach(mesh => mesh.dispose());
     main.scene.lights.filter(light => light.name !== "hemi").forEach(light => light.dispose());
     while (main.scene.animationGroups.length) {
         main.scene.animationGroups[0].dispose();
