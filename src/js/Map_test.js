@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createButton } from './utils/utils.js';
+import { addStaticPhysics } from './utils/utils.js';
 import { createSciFiPanelTexture, createSciFiEmissiveLinesTexture, createPbrPanelMaterial, createEmissiveStripTexture } from './utils/materials.js';
 
 export class MapTest extends CreateMap {

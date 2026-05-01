@@ -15,7 +15,8 @@ export class PlayerInput {
             "KeyD": "right",
             "Space": "jump",
             "KeyE": "interact",
-            "KeyP": "debug"
+            "KeyQ": "switchMode",
+            "KeyC": "debug"
         };
 
         scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, (evt) => {

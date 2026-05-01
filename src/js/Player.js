@@ -3,15 +3,17 @@ import * as BABYLON from '@babylonjs/core'
 import { PlayerInput } from "./PlayerInput.js";
 import { StateMachine } from "./playerStates/StateMachine.js";
 import { fade } from './utils/utils.js';
+import { ConnectionManager } from './ConnectionManager.js';
 
 export class Player {
 
-    constructor(scene, main) {
+    constructor(main) {
         this.isGrounded = false;
         this.lowFriction = false;
         this.groundDisableTimer = 0;
         this.jumpBufferTimer = 0;
         this.coyoteJumpTimer = 0;
+        this.jumpCooldownTimer = 0;
         this.velocity = BABYLON.Vector3.Zero();
         this.inheritedVelocity = BABYLON.Vector3.Zero();
         this.heldMesh = null;
@@ -30,7 +32,7 @@ export class Player {
         this.footstepWalkInterval = 0.45;
         this.footstepSprintInterval = 0.30;
 
-        this.scene = scene;
+        this.scene = main.scene;
         this.main = main
         this.playerData = {
             canHoldMeshes: true,
@@ -51,12 +53,13 @@ export class Player {
         this.GROUND_DISABLE_TIME = 0.1;
         this.JUMP_BUFFER_TIME = 0.15;
         this.COYOTE_JUMP_TIME = 0.1;
+        this.JUMP_COOLDOWN = 0.4;
         this.GRAPPLING_HOOK_COOLDOWN = 0.3;
 
         this.speed = this.WALK_SPEED;
         this.fov = this.BASE_FOV
 
-        this.highlight = new BABYLON.HighlightLayer("highlight", scene);
+        this.highlight = new BABYLON.HighlightLayer("highlight", this.scene);
         this.highlight.innerGlow = false
         this.highlight.blurHorizontalSize = 0.8
         this.highlight.blurVerticalSize = 0.8
@@ -64,16 +67,19 @@ export class Player {
         this.createPlayer()
         this.cameraRotation()
 
-        // BUG ICI
-        this.outliner = new BABYLON.SelectionOutlineLayer("outliner", scene)
+        // BUG ICI  enfait desfois ca ramplace les fichier shader par le html ?? pour resoudre il faut refresh en viant le cache
+        this.outliner = new BABYLON.SelectionOutlineLayer("outliner", this.scene)
         this.outliner.outlineColor = BABYLON.Color3.White()
         this.outliner.outlineThickness = 3.0;
 
-        this.input = new PlayerInput(scene);
+        this.input = new PlayerInput(this.scene);
+
+        this.connectionManager = new ConnectionManager(main, this)
+        this.firstSelected = null;
     }
 
     createPlayer() {
-        let playerHeight = 1.9;
+        let playerHeight = 2.3;
         let playerWidth = 0.7;
 
         this.player = new BABYLON.TransformNode("player", this.scene);
@@ -81,7 +87,7 @@ export class Player {
 
         this.player.position.copyFrom(this.respawnPos);
 
-        this.character = new BABYLON.PhysicsCharacterController(this.respawnPos, { capsuleHeight: (playerHeight - 0.3), capsuleRadius: (playerWidth / 2) }, this.scene);
+        this.character = new BABYLON.PhysicsCharacterController(this.respawnPos, { capsuleHeight: (playerHeight - 0.2), capsuleRadius: (playerWidth / 2) }, this.scene);
 
         this.head = new BABYLON.TransformNode("head", this.scene);
         this.head.position.y = 0.7;
@@ -125,7 +131,8 @@ export class Player {
         this.updateFromControls();
         this.stateMachine.update();
         if (this.stateMachine.checkIfCanMove()) {
-            this.grapplingHook();
+            // this.grapplingHook();
+            this.connectionManager.update()
             this.updateFootRay()
             this.updateRayPos(this.pickRay);
             this.checkPickRayHit();
@@ -138,13 +145,14 @@ export class Player {
 
         // debug
         if (this.input.justPressed["debug"]) {
+            const txt = `new BABYLON.Vector3(${this.character._position.x.toFixed(1)}, ${this.character._position.y.toFixed(1)}, ${this.character._position.z.toFixed(1)})`
+            navigator.clipboard.writeText(txt);
             console.log(this.character._position)
             console.log(BABYLON.Tools.ToDegrees(this.head.rotation.y))
             // this.stateMachine.currentState.nextState = this.stateMachine.states.dialog
             // console.log(this.character._position.y)
             // console.log(this.input.inputMap)
             // this.respawn()
-            // console.log(this.map.box.position);
             // console.log(this.velocity.y);
             if (this.input.justPressed["KeyO"]) {
                 // this.playerData.canJump = !this.playerData.canJump
@@ -388,7 +396,9 @@ export class Player {
                 return (!(mesh === this.heldMesh) && mesh.physicsBody && !(mesh.physicsBody?.shape.isTrigger));
             });
             if (pickInfo.hit) {
-                this.hand.position.z = Math.max(pickInfo.distance - 0.5, 1)
+                const size = this.heldMesh.getBoundingInfo().boundingBox.extendSize
+                const minDimension = Math.min(size.x, size.y, size.z);
+                this.hand.position.z = Math.max(pickInfo.distance - minDimension, 1)
             }
             else {
                 this.hand.position.z = 3
@@ -399,7 +409,7 @@ export class Player {
     // PAS TOP
     updateFootRay() {
         if (this.input.justPressed["jump"] && this.heldMesh) {
-            const aggregate = this.heldMesh.metadata.boxAggregate
+            const aggregate = this.heldMesh.metadata.meshAggregate
             const forward = this.head.getDirection(BABYLON.Axis.Z).scale(0.35);
             this.footRay.origin.copyFrom(this.character._position);
             const pickInfo = this.scene.pickWithRay(this.footRay, (mesh) => {
@@ -429,7 +439,7 @@ export class Player {
             this.highlight.removeAllMeshes()
             this.outliner.clearSelection();
 
-            const aggregate = this.heldMesh.metadata.boxAggregate;
+            const aggregate = this.heldMesh.metadata.meshAggregate;
             aggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
             aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(20));
 
@@ -444,9 +454,10 @@ export class Player {
     dropHeldMesh(aggregate) {
         if (this.heldMesh) {
             if (aggregate == undefined) {
-                aggregate = this.heldMesh.metadata.boxAggregate;
+                aggregate = this.heldMesh.metadata.meshAggregate;
             }
             aggregate.body.setLinearVelocity(this.hand.getAbsolutePosition().subtract(this.heldMesh.getAbsolutePosition()).scale(2));
+            aggregate.body.setMassProperties({ mass: aggregate._options.mass })
             this.heldMesh = null;
             this.isHoldingMesh = false;
         }

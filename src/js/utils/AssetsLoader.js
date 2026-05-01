@@ -66,16 +66,26 @@ export class AssetsLoader {
         this.loadModel("cave", "cave.glb")
         this.loadModel("robot", "robot.glb")
         this.loadModel("ship", "shipTest.glb")
-        this.loadModel("mapGate", "testLevelChange.glb")
+        this.loadModel("mapGate", "mapChangeGate.glb")
         this.loadModel("structure", "structure.glb")
         for (let i = 1; i <= 5; i++) {
             this.loadModel("ruins" + i, "ruins" + i + ".glb")
         }
         this.loadModel("ruinsPuzzleMap", "ruinsPuzzleMap.glb")
         this.loadModel("slime", "slime.glb")
+        this.loadModel("wall", "wall.glb")
+        this.loadModel("wallPillar", "wallPillar.glb")
+        this.loadModel("door", "door.glb")
+        this.loadModel("antiBoxGate", "antiBoxGate.glb")
+        this.loadModel("terrain", "terrain.glb")
+        this.loadModel("doors", "doors.glb")
+        this.loadModel("lab", "lab.glb")
+        this.loadModel("accesCard", "accesCard.glb")
+        this.loadModel("button", "button.glb")
 
         //////////////////// images ////////////////////
         this.loadImage("ground", "images/hmap.jpeg")
+        this.loadImage("ground2", "images/hmap2.jpg")
 
         //////////////////// materials ////////////////////
         this.loadTexture("asphalt", "/assets/terrain/asphalt_01.jpg", (texture) => {
@@ -85,7 +95,36 @@ export class AssetsLoader {
             mat.diffuseTexture.vScale = 50;
             mat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
             mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+            mat.diffuseTexture.updateSamplingMode(4)
             this.main.materials["ground"] = mat;
+        })
+
+        this.loadTexture("ground", "/images/ground_diffuse.jpg", (texture) => {
+            const mat = new BABYLON.StandardMaterial("groundMat2", this.scene);
+            mat.diffuseTexture = texture
+            mat.diffuseTexture.uScale = 10;
+            mat.diffuseTexture.vScale = 10;
+            mat.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+            mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
+            mat.diffuseTexture.updateSamplingMode(4)
+            mat.bumpTexture = new BABYLON.Texture("images/ground_normal.jpg", this.scene);
+            mat.bumpTexture.level = 1.0;
+            mat.bumpTexture.uScale = 20;
+            mat.bumpTexture.vScale = 20;
+            mat.invertNormalMapX = true;
+            this.main.materials["ground2"] = mat;
+        })
+        
+        this.loadTexture("snow", "/images/snow_ground_128.jpg", (texture) => {
+            const mat = new BABYLON.StandardMaterial("snow", this.scene);
+            mat.emissiveTexture = texture
+            mat.emissiveColor = new BABYLON.Color3(0.03, 0.03, 0.03);
+            mat.emissiveTexture.uScale = 200;
+            mat.emissiveTexture.vScale = 200;
+            mat.disableLighting = true
+            mat.emissiveTexture.updateSamplingMode(4)
+
+            this.main.materials["snow"] = mat;
         })
 
         const mat = new BABYLON.StandardMaterial("nonElectric", this.scene);

@@ -14,9 +14,10 @@ export class CreateMap {
 
         this.createLights(this.scene)
         this.changeSceneBackground(this.scene)
-        this.setupFog();
-        // // Medium bloom for neon accents (post-process on the player camera).
-        this.setupNeonBloom();
+        // this.setupFog();
+
+        // Medium bloom for neon accents (post-process on the player camera). desactivé car réduit la qualité
+        // this.setupNeonBloom();
 
         this.player.resetPos()
     }
@@ -89,8 +90,6 @@ export class CreateMap {
     createLights(scene) {
         this.light = new BABYLON.DirectionalLight("dir0", new BABYLON.Vector3(-0.5, -1, 0.2), scene);
         this.light.intensity = 1.25;
-        this.light.position = new BABYLON.Vector3(550, 280, -300);
-
         this.scene.clearColor = new BABYLON.Color3(0, 0, 0);
     }
 
