@@ -7,6 +7,7 @@ export class ElectricPuzzle {
         this.main = main
         this.pos = pos
         this.conductiveObjects = []
+        this.sourceEnabled = true
 
         this.grid =
             [[4, 1, 1, 3, 3],
@@ -18,6 +19,33 @@ export class ElectricPuzzle {
         this.createPuzzle2(pos)
         this.createPuzzle(pos)
 
+    }
+
+    setSourceEnabled(enabled) {
+        this.sourceEnabled = !!enabled
+    }
+
+    isSolved() {
+        for (const row of this.grid2 || []) {
+            for (const cell of row || []) {
+                if (cell?.type === 5 && cell?.powered) return true
+            }
+        }
+        return false
+    }
+
+    reset() {
+        // Respawn les objets conducteurs (ex: la box) si possible.
+        for (const obj of this.conductiveObjects || []) {
+            const respawn = obj?.metadata?.respawn
+            if (typeof respawn === 'function') {
+                respawn()
+            }
+        }
+
+        // Réactive la source par défaut et rafraîchit l'état/materials.
+        this.sourceEnabled = true
+        this.updateElectricity()
     }
 
     createPuzzle2(pos) {
@@ -124,13 +152,20 @@ export class ElectricPuzzle {
         const connectors = []
         const queue = []
 
+        const sourceEnabled = this.sourceEnabled !== false
+
         for (let row of this.grid2) {
             for (let cell of row) {
                 if (cell.type == 3) {
                     connectors.push(cell)
                 }
                 if (cell.type == 4) {
-                    queue.push(cell);
+                    if (sourceEnabled) {
+                        cell.powered = true
+                        queue.push(cell);
+                    } else {
+                        cell.powered = false
+                    }
                 }
                 else {
                     cell.powered = false;

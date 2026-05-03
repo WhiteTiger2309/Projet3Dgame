@@ -23,23 +23,77 @@ export function addStaticPhysics(mesh, shapeName) {
  */
 export function createMapChangeGate(main, map, gatePos, playerSpawnPos, gateRotation, playerSpawnRotation) {
     const instances = main.assets["mapGate"].instantiateModelsToScene((name) => name);
-    const gate = instances.rootNodes[0];
-    let trigger;
-    gate.position = gatePos
-    gate.rotationQuaternion = null
-    gate.rotation.y = gateRotation
-    gate.getDescendants().forEach(mesh => {
-        mesh.isVisible = false;
-        trigger = mesh
-        const triggerAggregate = addStaticPhysics(mesh, "BOX");
-        triggerAggregate.shape.isTrigger = true;
+    // Some GLBs instantiate multiple root nodes. If we move only the first one,
+    // parts of the gate (visuals/trigger) may stay elsewhere.
+    const gate = new BABYLON.TransformNode("mapGateRoot", main.scene);
+    instances.rootNodes.forEach((node) => {
+        // Parent every root node under a single node so the whole gate moves together.
+        node.parent = gate;
+    });
+    gate.position = gatePos;
+    gate.rotationQuaternion = null;
+    gate.rotation.y = gateRotation ?? 0;
+
+    // Keep the gate visible: only the trigger mesh should be invisible.
+    const childMeshes = gate.getChildMeshes
+        ? gate.getChildMeshes()
+        : gate.getDescendants().filter(d => d instanceof BABYLON.AbstractMesh);
+
+    // Try to find a dedicated trigger mesh in the GLB.
+    let triggerMesh =
+        childMeshes.find(m => m.name === "mapChangeTrigger") ||
+        childMeshes.find(m => /mapChangeTrigger/i.test(m.name)) ||
+        null;
+
+    // If the GLB has no trigger mesh, create one (invisible) as a child of the gate.
+    if (!triggerMesh) {
+        triggerMesh = BABYLON.MeshBuilder.CreateBox(
+            "mapChangeTrigger",
+            { width: 2.2, height: 2.8, depth: 2.2 },
+            main.scene
+        );
+        triggerMesh.parent = gate;
+        triggerMesh.position = new BABYLON.Vector3(0, 1.4, 0);
+    }
+
+    // Ensure the visible parts are actually visible/enabled.
+    childMeshes.forEach(m => {
+        if (m === triggerMesh) return;
+        m.setEnabled(true);
+        m.isVisible = true;
     });
 
-    trigger.metadata = {
+    // If the GLB provides no visible geometry (only a trigger), create a simple marker.
+    const hasVisualMesh = childMeshes.some(m => m !== triggerMesh);
+    if (!hasVisualMesh) {
+        const marker = BABYLON.MeshBuilder.CreateCylinder(
+            "mapGateMarker",
+            { diameter: 1.6, height: 2.6, tessellation: 24 },
+            main.scene
+        );
+        marker.parent = gate;
+        marker.position = new BABYLON.Vector3(0, 1.3, 0);
+
+        const mat = new BABYLON.StandardMaterial("mapGateMarkerMat", main.scene);
+        mat.emissiveColor = new BABYLON.Color3(0.3, 0.8, 1.0);
+        mat.disableLighting = false;
+        marker.material = mat;
+    }
+
+    triggerMesh.setEnabled(true);
+    triggerMesh.isVisible = false;
+    triggerMesh.isPickable = false;
+    const triggerAggregate = addStaticPhysics(triggerMesh, "BOX");
+    triggerAggregate.shape.isTrigger = true;
+
+    triggerMesh.metadata = {
+        ...(triggerMesh.metadata || {}),
         map: map,
         spawnPos: playerSpawnPos,
-        spawnRotation: playerSpawnRotation
+        spawnRotation: playerSpawnRotation,
     };
+
+    return { gate, trigger: triggerMesh };
 }
 
 export function createBounceSlime(main, pos) {
@@ -107,8 +161,21 @@ export function addTriggerObservable(havokPlugin, main) {
             colliderData.respawn()
         }
 
-        if ((ev.collider.transformNode.name === "CCTransformNode" && ev.collidedAgainst.transformNode.name === "mapChangeTrigger") && ev.type === "TRIGGER_ENTERED") {
-            fade(function () { changeMap(collidedData.map, main, collidedData.spawnPos, collidedData.spawnRotation) });
+        if (ev.type === "TRIGGER_ENTERED") {
+            const isPlayer = (node) => node?.name === "CCTransformNode";
+            const getGateData = (node) => node?.metadata?.map ? node.metadata : null;
+
+            if (isPlayer(ev.collider.transformNode)) {
+                const gateData = getGateData(ev.collidedAgainst.transformNode);
+                if (gateData) {
+                    fade(function () { changeMap(gateData.map, main, gateData.spawnPos, gateData.spawnRotation) });
+                }
+            } else if (isPlayer(ev.collidedAgainst.transformNode)) {
+                const gateData = getGateData(ev.collider.transformNode);
+                if (gateData) {
+                    fade(function () { changeMap(gateData.map, main, gateData.spawnPos, gateData.spawnRotation) });
+                }
+            }
         }
 
         if ((ev.collider.transformNode.name === "CCTransformNode" && ev.collidedAgainst.transformNode.name === "bounceTrigger") && ev.type === "TRIGGER_ENTERED") {
@@ -230,4 +297,54 @@ export function createMeshFromAsset(asset, pos, collisionsShape, rotation, allCo
 export function createAntiBoxGate(main, pos, rotation) {
     const gate = createMeshFromAsset(main.assets["antiBoxGate"], pos, "BOX", BABYLON.Tools.ToRadians(rotation))._children[0]
     gate.metadata.aggregate.shape.isTrigger = true
+}
+
+/**
+ * Create a ship at a teleporter gate with interactive door.
+ * @param main {Main} - The instance of the class Main
+ * @param pos {Vector3} - The position of the ship
+ * @param rotation {Number} - The rotation in radians (default 90 degrees)
+ */
+export function createShipAtGate(main, pos, rotation = BABYLON.Tools.ToRadians(90)) {
+    // Instantiate ship from asset
+    const ship = createMeshFromAsset(main.assets["ship"], pos, "MESH", rotation, false);
+
+    // Find and configure the door
+    const door = main.scene.getMeshByName("Door");
+    if (door) {
+        door.metadata.defaultPos = door.position.clone();
+        door.metadata.isOpen = true;
+        door.metadata.aggregate.body.disablePreStep = false;
+        door.position = door.metadata.defaultPos.clone().addInPlace(new BABYLON.Vector3(0, 2, 0));
+    }
+
+    // Find and configure the button animation
+    const buttonPressedAnimation = main.scene.getAnimationGroupByName("InsideButtonPressed");
+    if (buttonPressedAnimation) {
+        buttonPressedAnimation.stop();
+    }
+
+    // Find and configure the button interaction
+    const insideButton = main.scene.getMeshByName("InsideButton");
+    if (insideButton) {
+        insideButton.metadata = {
+            isInteractable: true,
+            onInteract: () => {
+                if (buttonPressedAnimation && !buttonPressedAnimation.isPlaying) {
+                    buttonPressedAnimation.play();
+                    // Toggle door state
+                    if (door) {
+                        if (door.metadata.isOpen) {
+                            door.position = door.metadata.defaultPos.clone();
+                        } else {
+                            door.position = door.metadata.defaultPos.clone().addInPlace(new BABYLON.Vector3(0, 2, 0));
+                        }
+                        door.metadata.isOpen = !door.metadata.isOpen;
+                    }
+                }
+            }
+        };
+    }
+
+    return ship;
 }

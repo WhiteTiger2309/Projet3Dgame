@@ -1893,6 +1893,7 @@ export class MapLazer extends CreateMap {
         const queue = [];
         for (const e of this.emitters || []) {
             if (!e?.mesh) continue;
+            if (e.enabled === false) continue;
             const dir = this.getDirectionFromYawPitch(e.yaw || 0, e.pitch || 0);
             const start = e.mesh.getAbsolutePosition().add(dir.scale(1.25));
             queue.push({ origin: start, dir, color: e.color || new BABYLON.Color3(1, 0.2, 0.2), depth: 0, ignore: e.mesh });
