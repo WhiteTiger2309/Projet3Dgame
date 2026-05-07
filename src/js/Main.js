@@ -96,8 +96,8 @@ export class Main {
         // this.sounds["music"].play()
         // const ssao = new BABYLON.SSAO2RenderingPipeline('ssaopipeline', this.scene, { ssaoRatio: 0.5, blurRatio: 1.0 }, this.player.camera);
 
-        this.map = new MapStart(this);
-        // this.map = new MapLab(this);
+        // this.map = new MapStart(this);
+        this.map = new MapLab(this);
         await this.map.createMap()
         this.scene.registerBeforeRender(() => {
             this.map.beforeRenderUpdate();

@@ -1,6 +1,6 @@
 import * as BABYLON from '@babylonjs/core'
 
-import { createMapChangeGate, addStaticPhysics, createShipAtGate } from './utils/utils.js';
+import { createMapChangeGate, addStaticPhysics } from './utils/utils.js';
 import { createEmissiveStripTexture, createPbrPanelMaterial } from './utils/materials.js';
 import { MapLazer } from './Map_lazer.js';
 import { MapLazer3 } from './Map_lazer3.js';
@@ -29,7 +29,7 @@ export class MapLazer2 extends MapLazer {
         // Gate vers MapLazer3 dans la salle de sortie.
         // On le place juste derrière la porte (côté salle 2).
         const gatePos = new BABYLON.Vector3(this.roomBoundaryX(0) + 2.4, 0, 0);
-        createMapChangeGate(this.main, MapLazer3, gatePos, undefined, 0);
+        createMapChangeGate(this.main, MapLazer3, gatePos, undefined, 90);
 
         // Marqueur visible: permet de repérer clairement le téléporteur.
         const marker = BABYLON.MeshBuilder.CreateCylinder(

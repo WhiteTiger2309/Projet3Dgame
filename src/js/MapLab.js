@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createShipAtGate } from './utils/utils.js';
+import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox } from './utils/utils.js';
 import { Map } from './Map.js';
 import { Robot } from './Robot.js';
 import { MapLazer1 } from './Map_lazer1.js';
@@ -34,23 +34,7 @@ export class MapLab extends CreateMap {
         new Button(this.main, new BABYLON.Vector3(-0.1, 1.1, -0.3), 90, false, door1)
         new Button(this.main, new BABYLON.Vector3(11.7, 1.1, 2), 0, true)
 
-        // TEMP: Téléporteur placé dans la salle pour valider qu'il fonctionne.
-        // (Une fois validé, on le remettra derrière door1.)
-        const gatePos = new BABYLON.Vector3(17, 0, 5);
-        createMapChangeGate(this.main, MapLazer1, gatePos, undefined, 0);
-        //createShipAtGate(this.main, gatePos);
-
-        // Marqueur visible forcé (debug): permet de localiser la zone de téléportation.
-        const marker = BABYLON.MeshBuilder.CreateCylinder(
-            "labTeleportDebugMarker",
-            { diameter: 1.6, height: 2.6, tessellation: 24 },
-            this.scene
-        );
-        marker.position = gatePos.clone();
-        marker.position.y += 1.3;
-        const mat = new BABYLON.StandardMaterial("labTeleportDebugMarkerMat", this.scene);
-        mat.emissiveColor = new BABYLON.Color3(0.3, 0.8, 1.0);
-        marker.material = mat;
+        createMapChangeGate(this.main, MapLazer1, new BABYLON.Vector3(14, 0, 5), undefined, 90);
     }
 
     mapBeforeRenderUpdate() {

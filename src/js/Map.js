@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createAntiBoxGate, createShipAtGate } from './utils/utils.js';
+import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createAntiBoxGate } from './utils/utils.js';
 import { Robot } from './Robot.js';
 import { ElectricPuzzle } from './ElectricPuzzle.js';
 import { MapStart } from './MapStart.js';
@@ -31,7 +31,7 @@ export class Map extends CreateMap {
         this.createStructure(placeOnGround(this.ground, 250, -80))
         new Robot(this.main, placeOnGround(this.ground, 0, 10), 1.4)
         createMapChangeGate(this.main, MapStart, new BABYLON.Vector3(10, 0, 0), new BABYLON.Vector3(0, 2, 0), BABYLON.Tools.ToRadians(90))
-        createShipAtGate(this.main, new BABYLON.Vector3(10, 0, 0), BABYLON.Tools.ToRadians(90))
+        // this.createShip(this.main, new BABYLON.Vector3(10, 0, 0), BABYLON.Tools.ToRadians(90))
 
 
         this.electricPuzzle = new ElectricPuzzle(this.main, new BABYLON.Vector3(10, 1, 10))

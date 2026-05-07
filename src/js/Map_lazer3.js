@@ -26,7 +26,7 @@ export class MapLazer3 extends MapLazer {
         // Gate vers MapLazer4 dans la salle de sortie.
         // On le place juste derrière la porte (côté salle 2).
         const gatePos = new BABYLON.Vector3(this.roomBoundaryX(0) + 2.4, 0, 0);
-        createMapChangeGate(this.main, MapLazer4, gatePos, undefined, 0);
+        createMapChangeGate(this.main, MapLazer4, gatePos, undefined, 90);
 
         // Marqueur visible: permet de repérer clairement le téléporteur.
         const marker = BABYLON.MeshBuilder.CreateCylinder(

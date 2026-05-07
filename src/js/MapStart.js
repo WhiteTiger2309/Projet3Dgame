@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createAntiBoxGate, placeOnMesh, createGrabbableObject } from './utils/utils.js';
+import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createAntiBoxGate, placeOnMesh, createGrabbableObject, createShip } from './utils/utils.js';
 import { Map } from './Map.js';
 import { MapLab } from './MapLab.js';
 
@@ -9,8 +9,7 @@ export class MapStart extends CreateMap {
     constructor(main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
         if (PLAYER_SPAWN_POS == undefined) {
             PLAYER_SPAWN_POS = new BABYLON.Vector3(28.0, 1.9, -6.6)
-            // PLAYER_SPAWN_POS = new BABYLON.Vector3(32.4, 7.8, 38.2)
-            // PLAYER_SPAWN_POS = new BABYLON.Vector3(33.9, 10.9, 38.6)
+            // PLAYER_SPAWN_POS = new BABYLON.Vector3(34.7, 8.0, 41.9)
         }
         if (PLAYER_SPAWN_ROTATION == undefined) {
             PLAYER_SPAWN_ROTATION = 177
@@ -27,7 +26,7 @@ export class MapStart extends CreateMap {
         this.createDoors(new BABYLON.Vector3(30, 1, 20));
         // this.createCard(new BABYLON.Vector3(37.8, 3, -17.2))
 
-        this.createShip(placeOnMesh(this.main, new BABYLON.Vector3(35.4, 7.7, 40.3)), BABYLON.Tools.ToRadians(90))
+        createShip(this.main, placeOnMesh(this.main, new BABYLON.Vector3(35.4, 7.7, 40.3)), BABYLON.Tools.ToRadians(90))
         createMapChangeGate(this.main, MapLab, new BABYLON.Vector3(29, 0, -20.8), undefined, BABYLON.Tools.ToRadians(180))
     }
 
@@ -79,29 +78,6 @@ export class MapStart extends CreateMap {
                 }
             }, scene);
         })
-    }
-
-    createShip(pos, rotation) {
-        createMeshFromAsset(this.main.assets["ship"], pos, "MESH", rotation, false)
-
-        const door = this.scene.getMeshByName("Door");
-        door.metadata.defaultPos = door.position.clone();
-        door.metadata.isOpen = false;
-        door.metadata.aggregate.body.disablePreStep = false;
-
-        const buttonPressedAnimation = this.scene.getAnimationGroupByName("InsideButtonPressed")
-        buttonPressedAnimation.stop()
-
-        const insideButton = this.scene.getMeshByName("InsideButton")
-        insideButton.metadata = {
-            isInteractable: true,
-            onInteract: () => {
-                if (!buttonPressedAnimation.isPlaying) {
-                    buttonPressedAnimation.play();
-                    this.toggleShipDoor(door);
-                }
-            }
-        }
     }
 
     changeSceneBackground(scene) {
