@@ -82,6 +82,7 @@ export class AssetsLoader {
         this.loadModel("lab", "lab.glb")
         this.loadModel("accesCard", "accesCard.glb")
         this.loadModel("button", "button.glb")
+        this.loadModel("defaultMap", "defaultMap.glb")
 
         //////////////////// images ////////////////////
         this.loadImage("ground", "images/hmap.jpeg")

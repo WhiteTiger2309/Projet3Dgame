@@ -40,6 +40,7 @@ export function createMapChangeGate(main, map, gatePos, playerSpawnPos, gateRota
         spawnPos: playerSpawnPos,
         spawnRotation: playerSpawnRotation
     };
+    return trigger
 }
 
 export function createBounceSlime(main, pos) {

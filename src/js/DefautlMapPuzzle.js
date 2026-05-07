@@ -2,15 +2,12 @@ import * as BABYLON from '@babylonjs/core'
 
 import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox } from './utils/utils.js';
-import { Map } from './Map.js';
-import { Robot } from './Robot.js';
-import { MapPuzzle1 } from './MapPuzzle1.js';
-
 import { PressurePlate } from './ConnectableObjects/PressurePlate.js';
 import { Door } from './ConnectableObjects/Door.js';
 import { Button } from './ConnectableObjects/Button.js';
+import { MapPuzzle1 } from './MapPuzzle1.js';
 
-export class MapLab extends CreateMap {
+export class DefautlMapPuzzle extends CreateMap {
     constructor(main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
         if (PLAYER_SPAWN_POS == undefined) {
             PLAYER_SPAWN_POS = new BABYLON.Vector3(0, 1, 9)
@@ -26,25 +23,22 @@ export class MapLab extends CreateMap {
 
     async createMap() {
         this.createLab(new BABYLON.Vector3(0, 0, 0));
-        new Robot(this.main, new BABYLON.Vector3(-0.4, 1.1, -12.9), 180)
-        const door1 = new Door(this.main, new BABYLON.Vector3(9.3, 0, -4.9), 0, false, "y", 3)
-        const door2 = new Door(this.main, new BABYLON.Vector3(13, 0, 4.9), 90, true, "y", 3)
-        const door3 = new Door(this.main, new BABYLON.Vector3(27.4, 0, -5.7), 0, true, "y", 3)
-        // new PressurePlate(this.main, new BABYLON.Vector3(2.3, 1.1, -0.8), 0, true)
-        new Button(this.main, new BABYLON.Vector3(-0.1, 1.1, -0.3), 90, false, door1)
-        new Button(this.main, new BABYLON.Vector3(11.7, 1.1, 2), 0, true)
+        this.exitDoor = new Door(this.main, new BABYLON.Vector3(-0.1, 0, -12.8), 0, false, "y", 3)
 
-        createMapChangeGate(this.main, MapPuzzle1, new BABYLON.Vector3(14, 0, 5), undefined, 90);
+        this.gate = createMapChangeGate(this.main, MapPuzzle1, new BABYLON.Vector3(-0.1, 0, -13.5), undefined, 180);
+        this.createPuzzle();
     }
 
-    mapBeforeRenderUpdate() {
+    createPuzzle() {
 
     }
 
     createLab(pos) {
-        createMeshFromAsset(this.main.assets["lab"], pos, "MESH")
+        // TODO changer textures du modèle 3D de la map
+        createMeshFromAsset(this.main.assets["defaultMap"], pos, "MESH")
     }
 
+    // TODO changer lumières
     createLights(scene) {
         this.light = new BABYLON.PointLight("labLight1", new BABYLON.Vector3(-4.8, 1.9, -1.7), scene);
         this.light.intensity = 100.25;
