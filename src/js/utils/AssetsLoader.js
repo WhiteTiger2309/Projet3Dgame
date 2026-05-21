@@ -8,6 +8,7 @@ export class AssetsLoader {
         this.main = main;
         this.assetsManager = new BABYLON.AssetsManager(this.scene);
         this.assetsManager.useDefaultLoadingScreen = false;
+        this.soundPromises = [];
     }
 
     async loadModel(name, file) {
@@ -32,32 +33,15 @@ export class AssetsLoader {
         };
     }
 
-    async loadSound(name, url) {
-        const soundTask = this.assetsManager.addBinaryFileTask(name, url);
-        soundTask.onSuccess = (task) => {
-            if (!this.main.soundBuffers) {
-                this.main.soundBuffers = {};
-            }
+    async loadSound(name, url, loop = false, volume = 1) {
+        const promise = BABYLON.CreateSoundAsync(name, url).then(sound => {
+            sound.loop = loop;
+            sound.volume = volume;
 
-            let audioData = task.data;
-            try {
-                audioData = this.normalizeBinaryAudioData(task.data);
-            } catch {
-                // Keep original data if normalization fails.
-            }
+            this.main.sounds[name] = sound;
+        });
 
-            this.main.soundBuffers[name] = audioData;
-        };
-    }
-
-    normalizeBinaryAudioData(data) {
-        if (!data) return data;
-        if (data instanceof ArrayBuffer) return data;
-        if (ArrayBuffer.isView(data)) {
-            const view = data;
-            return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
-        }
-        return data;
+        this.soundPromises.push(promise);
     }
 
     async preloadAllAssets() {
@@ -115,7 +99,7 @@ export class AssetsLoader {
             mat.invertNormalMapX = true;
             this.main.materials["ground2"] = mat;
         })
-        
+
         this.loadTexture("snow", "/images/snow_ground_128.jpg", (texture) => {
             const mat = new BABYLON.StandardMaterial("snow", this.scene);
             mat.emissiveTexture = texture
@@ -145,22 +129,28 @@ export class AssetsLoader {
             this.main.materials["spaceSkyAbove"] = mat;
         })
 
-        // Audio buffers preloaded for SoundManager (music + footsteps).
-        this.loadSound("ambientMusic", "/sounds/main_theme.mp3");
-        this.loadSound("footstep_0", "/sounds/51124243-footstep-372877.mp3");
-        this.loadSound("footstep_1", "/sounds/footstep-safe.wav");
+        //////////////////// sounds ////////////////////
+        this.loadSound("ambientMusic", "/sounds/main_theme.mp3", true, 0.01);
+        this.loadSound("menuMusic", "/sounds/menu_theme.mp3", true, 0.05);
+        this.loadSound("footstep1", "/sounds/footstep1.wav", false, 0.15);
+        this.loadSound("footstep2", "/sounds/footstep2.wav", false, 0.15);
+        this.loadSound("footstep3", "/sounds/footstep3.wav", false, 0.15);
+        this.loadSound("footstep4", "/sounds/footstep4.wav", false, 0.15);
 
         ////////////////////////////////////////
         this.assetsManager.onProgress = (remaining, total) => {
             console.log(`Loading: ${total - remaining}/${total}`);
         };
 
-        await new Promise(resolve => {
-            this.assetsManager.onFinish = () => {
-                console.log("All assets loaded");
-                resolve();
-            };
-            this.assetsManager.load();
-        });
+        await Promise.all([
+            await new Promise(resolve => {
+                this.assetsManager.onFinish = () => {
+                    console.log("All assets loaded");
+                    resolve();
+                };
+                this.assetsManager.load();
+            }),
+            Promise.all(this.soundPromises)
+        ]);
     }
 }

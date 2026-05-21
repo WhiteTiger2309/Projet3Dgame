@@ -27,10 +27,10 @@ export class Player {
         this.respawnPos = new BABYLON.Vector3(0, 4.5, 0)
         this.respawnRotation = 0
 
-        // Footsteps timing (SoundManager handles actual audio)
+        // Footsteps timing
         this.footstepStepTimer = 0;
-        this.footstepWalkInterval = 0.45;
-        this.footstepSprintInterval = 0.30;
+        this.footstepLowerInterval = 0.11;
+        this.footstepHigherInterval = 0.17;
 
         this.scene = main.scene;
         this.main = main
@@ -67,7 +67,6 @@ export class Player {
         this.createPlayer()
         this.cameraRotation()
 
-        // BUG ICI  enfait desfois ca ramplace les fichier shader par le html ?? pour resoudre il faut refresh en viant le cache
         this.outliner = new BABYLON.SelectionOutlineLayer("outliner", this.scene)
         this.outliner.outlineColor = BABYLON.Color3.White()
         this.outliner.outlineThickness = 3.0;
@@ -140,8 +139,6 @@ export class Player {
             this.updateHeldMeshPos();
             this.isOutOfBound()
         }
-        
-        this.updateFootstepAudio(deltaTime);
 
         // debug
         if (this.input.justPressed["debug"]) {
@@ -164,34 +161,31 @@ export class Player {
     }
 
     updateFootstepAudio() {
-        const canMove = this.stateMachine.checkIfCanMove();
-        const moveSpeed2D = Math.hypot(this.velocity.x, this.velocity.z);
-        const hasMoveInput =
-            !!this.input?.inputMap?.["KeyW"] ||
-            !!this.input?.inputMap?.["KeyA"] ||
-            !!this.input?.inputMap?.["KeyS"] ||
-            !!this.input?.inputMap?.["KeyD"];
-
-        const shouldPlay =
-            canMove &&
-            (hasMoveInput || moveSpeed2D > 0.2);
-
-        if (shouldPlay) {
+        if (!this.isFootstepPlaying()) {
             this.footstepStepTimer -= this.deltaTime;
-            const interval = this.isSprinting ? this.footstepSprintInterval : this.footstepWalkInterval;
 
             if (this.footstepStepTimer <= 0) {
+                const interval = (Math.random() * (this.footstepLowerInterval - this.footstepHigherInterval) + this.footstepHigherInterval)
                 this.footstepStepTimer = interval;
                 try {
-                    this.main?.sound?.playFootstep?.();
+                    let randomIndex = Math.floor(Math.random() * 4) + 1;
+                    this.main.sounds[`footstep${randomIndex}`].play()
                 } catch (error) {
                     // noop
                 }
             }
-        } else {
-            this.footstepStepTimer = 0;
+        }
+    }
+    isFootstepPlaying() {
+        if (this.main.sounds["footstep1"].activeInstancesCount > 0 ||
+            this.main.sounds["footstep2"].activeInstancesCount > 0 ||
+            this.main.sounds["footstep3"].activeInstancesCount > 0 ||
+            this.main.sounds["footstep4"].activeInstancesCount > 0
+        ) {
+            return true
         }
 
+        return false
     }
 
 
@@ -225,6 +219,7 @@ export class Player {
         const velocityXZ = Math.abs(this.velocity.x) + Math.abs(this.velocity.z)
         if (this.isGrounded) {
             if (move.length() > 0) {
+                this.updateFootstepAudio()
                 const velocityXZMove = Math.abs(this.velocity.x * move.x) + Math.abs(this.velocity.z * move.z)
                 if (this.lowFriction) {
                     this.velocity.x = BABYLON.Lerp(this.velocity.x, move.x * this.speed, this.deltaTime * 3);

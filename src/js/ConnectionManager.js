@@ -63,6 +63,7 @@ export class ConnectionManager {
             line.mesh.isVisible = false
         })
         this.previewLine.isVisible = false
+        this.outliner.clearSelection();
     }
 
     interactionUpdate() {

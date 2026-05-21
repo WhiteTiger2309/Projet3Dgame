@@ -8,8 +8,8 @@ import { MapLab } from './MapLab.js';
 export class MapStart extends CreateMap {
     constructor(main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
         if (PLAYER_SPAWN_POS == undefined) {
-            PLAYER_SPAWN_POS = new BABYLON.Vector3(28.0, 1.9, -6.6)
-            // PLAYER_SPAWN_POS = new BABYLON.Vector3(34.7, 8.0, 41.9)
+            // PLAYER_SPAWN_POS = new BABYLON.Vector3(28.0, 1.9, -6.6)
+            PLAYER_SPAWN_POS = new BABYLON.Vector3(34.7, 8.0, 41.9)
         }
         if (PLAYER_SPAWN_ROTATION == undefined) {
             PLAYER_SPAWN_ROTATION = 177
