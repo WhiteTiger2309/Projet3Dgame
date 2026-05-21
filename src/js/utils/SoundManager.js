@@ -1,4 +1,5 @@
 import * as BABYLON from '@babylonjs/core'
+const BASE = import.meta.env.BASE_URL || '/';
 
 export class SoundManager {
 
@@ -29,8 +30,8 @@ export class SoundManager {
         this._footstepNativeUnlockTried = false;
 
         this.footstepCandidates = [
-            "/sounds/51124243-footstep-372877.mp3",
-            "/sounds/footstep-safe.wav",
+            BASE + "sounds/51124243-footstep-372877.mp3",
+            BASE + "sounds/footstep-safe.wav",
         ];
     }
 
@@ -172,7 +173,7 @@ export class SoundManager {
             // Fallback to streaming URL (legacy behavior).
             this.ambientMusic = new BABYLON.Sound(
                 "ambientMusic",
-                "/sounds/main_theme.mp3",
+                BASE + "sounds/main_theme.mp3",
                 this.scene,
                 () => {
                     this.ambientMusicReady = true;
@@ -195,7 +196,7 @@ export class SoundManager {
     }
 
     initAmbientMusicNative() {
-        const audio = new Audio("/sounds/main_theme.mp3");
+        const audio = new Audio(BASE + "sounds/main_theme.mp3");
         audio.preload = "auto";
         audio.loop = true;
         audio.volume = 0.07;

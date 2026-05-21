@@ -1,5 +1,6 @@
 import * as BABYLON from '@babylonjs/core'
 import '@babylonjs/loaders'
+const BASE = import.meta.env.BASE_URL || '/';
 
 export class AssetsLoader {
 
@@ -12,7 +13,7 @@ export class AssetsLoader {
     }
 
     async loadModel(name, file) {
-        const meshTask = this.assetsManager.addContainerTask(name, name, "models/", file);
+        const meshTask = this.assetsManager.addContainerTask(name, name, BASE + "models/", file);
         meshTask.onSuccess = (task) => {
             this.main.assets[name] = task.loadedContainer;
         };
@@ -69,11 +70,11 @@ export class AssetsLoader {
         this.loadModel("defaultMap", "defaultMap.glb")
 
         //////////////////// images ////////////////////
-        this.loadImage("ground", "images/hmap.jpeg")
-        this.loadImage("ground2", "images/hmap2.jpg")
+        this.loadImage("ground", BASE + "images/hmap.jpeg")
+        this.loadImage("ground2", BASE + "images/hmap2.jpg")
 
         //////////////////// materials ////////////////////
-        this.loadTexture("asphalt", "/assets/terrain/asphalt_01.jpg", (texture) => {
+        this.loadTexture("asphalt", BASE + "assets/terrain/asphalt_01.jpg", (texture) => {
             const mat = new BABYLON.StandardMaterial("groundMat", this.scene);
             mat.diffuseTexture = texture
             mat.diffuseTexture.uScale = 50;
@@ -84,7 +85,7 @@ export class AssetsLoader {
             this.main.materials["ground"] = mat;
         })
 
-        this.loadTexture("ground", "/images/ground_diffuse.jpg", (texture) => {
+        this.loadTexture("ground", BASE + "images/ground_diffuse.jpg", (texture) => {
             const mat = new BABYLON.StandardMaterial("groundMat2", this.scene);
             mat.diffuseTexture = texture
             mat.diffuseTexture.uScale = 10;
@@ -92,7 +93,7 @@ export class AssetsLoader {
             mat.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
             mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
             mat.diffuseTexture.updateSamplingMode(4)
-            mat.bumpTexture = new BABYLON.Texture("images/ground_normal.jpg", this.scene);
+            mat.bumpTexture = new BABYLON.Texture(BASE + "images/ground_normal.jpg", this.scene);
             mat.bumpTexture.level = 1.0;
             mat.bumpTexture.uScale = 20;
             mat.bumpTexture.vScale = 20;
@@ -100,7 +101,7 @@ export class AssetsLoader {
             this.main.materials["ground2"] = mat;
         })
 
-        this.loadTexture("snow", "/images/snow_ground_128.jpg", (texture) => {
+        this.loadTexture("snow", BASE + "images/snow_ground_128.jpg", (texture) => {
             const mat = new BABYLON.StandardMaterial("snow", this.scene);
             mat.emissiveTexture = texture
             mat.emissiveColor = new BABYLON.Color3(0.03, 0.03, 0.03);
@@ -118,7 +119,7 @@ export class AssetsLoader {
         mat2.emissiveColor = new BABYLON.Color3(1, 1, 0);
         this.main.materials["electric"] = mat2;
 
-        this.loadTexture("space", "/assets/space/space1.png", (texture) => {
+        this.loadTexture("space", BASE + "assets/space/space1.png", (texture) => {
             const mat = new BABYLON.StandardMaterial("spaceSkyAboveMat", this.scene);
             mat.diffuseTexture = texture
             mat.diffuseTexture.uScale = 1;
@@ -130,12 +131,12 @@ export class AssetsLoader {
         })
 
         //////////////////// sounds ////////////////////
-        this.loadSound("ambientMusic", "/sounds/main_theme.mp3", true, 0.01);
-        this.loadSound("menuMusic", "/sounds/menu_theme.mp3", true, 0.05);
-        this.loadSound("footstep1", "/sounds/footstep1.wav", false, 0.15);
-        this.loadSound("footstep2", "/sounds/footstep2.wav", false, 0.15);
-        this.loadSound("footstep3", "/sounds/footstep3.wav", false, 0.15);
-        this.loadSound("footstep4", "/sounds/footstep4.wav", false, 0.15);
+        this.loadSound("ambientMusic", BASE + "sounds/main_theme.mp3", true, 0.01);
+        this.loadSound("menuMusic", BASE + "sounds/menu_theme.mp3", true, 0.05);
+        this.loadSound("footstep1", BASE + "sounds/footstep1.wav", false, 0.15);
+        this.loadSound("footstep2", BASE + "sounds/footstep2.wav", false, 0.15);
+        this.loadSound("footstep3", BASE + "sounds/footstep3.wav", false, 0.15);
+        this.loadSound("footstep4", BASE + "sounds/footstep4.wav", false, 0.15);
 
         ////////////////////////////////////////
         this.assetsManager.onProgress = (remaining, total) => {

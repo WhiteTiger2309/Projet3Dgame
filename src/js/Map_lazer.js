@@ -1,4 +1,5 @@
 import * as BABYLON from '@babylonjs/core'
+const BASE = import.meta.env.BASE_URL || '/';
 
 import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics } from './utils/utils.js';
@@ -261,7 +262,7 @@ export class MapLazer extends CreateMap {
 
         // Asphalt ground (matte) for readability.
         const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
-        const asphalt = new BABYLON.Texture('/assets/terrain/asphalt_01.jpg', scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+        const asphalt = new BABYLON.Texture(BASE + 'assets/terrain/asphalt_01.jpg', scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
         asphalt.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
         asphalt.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
         asphalt.uScale = Math.max(6, groundWidth / 16);
@@ -298,7 +299,7 @@ export class MapLazer extends CreateMap {
         sky.isPickable = false;
 
         const skyMat = new BABYLON.StandardMaterial('spaceSkyAboveMat', scene);
-        skyMat.diffuseTexture = new BABYLON.Texture('/assets/space/space1.png', scene);
+        skyMat.diffuseTexture = new BABYLON.Texture(BASE + 'assets/space/space1.png', scene);
         skyMat.emissiveTexture = skyMat.diffuseTexture;
         skyMat.disableLighting = true;
         skyMat.backFaceCulling = false;

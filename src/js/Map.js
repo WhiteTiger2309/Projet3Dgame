@@ -1,4 +1,5 @@
 import * as BABYLON from '@babylonjs/core'
+const BASE = import.meta.env.BASE_URL || '/';
 
 import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createAntiBoxGate } from './utils/utils.js';
@@ -43,7 +44,7 @@ export class Map extends CreateMap {
 
     createGround(scene) {
         return new Promise((resolve) => {
-            this.ground = BABYLON.MeshBuilder.CreateGroundFromHeightMap("ground", 'images/hmap.jpeg', {
+            this.ground = BABYLON.MeshBuilder.CreateGroundFromHeightMap("ground", BASE + 'images/hmap.jpeg', {
                 width: 850,
                 height: 850,
                 subdivisions: 25,
