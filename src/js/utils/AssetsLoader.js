@@ -47,33 +47,22 @@ export class AssetsLoader {
 
     async preloadAllAssets() {
         //////////////////// 3D models ////////////////////
-        this.loadModel("puzzleMap1", "puzzleMap1.glb")
-        this.loadModel("cave", "cave.glb")
         this.loadModel("robot", "robot.glb")
         this.loadModel("ship", "shipTest.glb")
         this.loadModel("mapGate", "mapChangeGate.glb")
-        this.loadModel("structure", "structure.glb")
-        for (let i = 1; i <= 5; i++) {
-            this.loadModel("ruins" + i, "ruins" + i + ".glb")
-        }
-        this.loadModel("ruinsPuzzleMap", "ruinsPuzzleMap.glb")
         this.loadModel("slime", "slime.glb")
-        this.loadModel("wall", "wall.glb")
-        this.loadModel("wallPillar", "wallPillar.glb")
         this.loadModel("door", "door.glb")
         this.loadModel("antiBoxGate", "antiBoxGate.glb")
         this.loadModel("terrain", "terrain.glb")
         this.loadModel("doors", "doors.glb")
         this.loadModel("lab", "lab.glb")
-        this.loadModel("accesCard", "accesCard.glb")
         this.loadModel("button", "button.glb")
         this.loadModel("defaultMap", "defaultMap.glb")
         // Optional turret station model (dropped-in by designer)
         this.loadModel("turret", "Turret.glb")
 
         //////////////////// images ////////////////////
-        this.loadImage("ground", BASE + "images/hmap.jpeg")
-        this.loadImage("ground2", BASE + "images/hmap2.jpg")
+        this.loadImage("ground", BASE + "images/hmap2.jpg")
 
         //////////////////// materials ////////////////////
         this.loadTexture("asphalt", BASE + "assets/terrain/asphalt_01.jpg", (texture) => {
@@ -85,22 +74,6 @@ export class AssetsLoader {
             mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
             mat.diffuseTexture.updateSamplingMode(4)
             this.main.materials["ground"] = mat;
-        })
-
-        this.loadTexture("ground", BASE + "images/ground_diffuse.jpg", (texture) => {
-            const mat = new BABYLON.StandardMaterial("groundMat2", this.scene);
-            mat.diffuseTexture = texture
-            mat.diffuseTexture.uScale = 10;
-            mat.diffuseTexture.vScale = 10;
-            mat.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
-            mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-            mat.diffuseTexture.updateSamplingMode(4)
-            mat.bumpTexture = new BABYLON.Texture(BASE + "images/ground_normal.jpg", this.scene);
-            mat.bumpTexture.level = 1.0;
-            mat.bumpTexture.uScale = 20;
-            mat.bumpTexture.vScale = 20;
-            mat.invertNormalMapX = true;
-            this.main.materials["ground2"] = mat;
         })
 
         this.loadTexture("snow", BASE + "images/snow_ground_128.jpg", (texture) => {

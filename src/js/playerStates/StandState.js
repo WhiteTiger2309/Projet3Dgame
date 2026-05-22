@@ -13,7 +13,7 @@ export class StandState extends State {
     }
 
     enter() {
-        console.log("Enter Stand");
+        // console.log("Enter Stand");
     }
 
     update() {
@@ -46,6 +46,6 @@ export class StandState extends State {
     }
 
     exit() {
-        console.log("Exit Stand");
+        // console.log("Exit Stand");
     }
 }

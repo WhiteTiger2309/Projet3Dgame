@@ -37,7 +37,7 @@ export class Player {
         this.playerData = {
             canHoldMeshes: true,
             canJump: true,
-            hasGrapplingHook: true
+            hasLinkPower: false
         }
 
         this.stateMachine = new StateMachine(this)
@@ -98,7 +98,6 @@ export class Player {
         this.camera.fov = this.fov
 
         this.pickRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero(), 4);
-        this.grapplingHookRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero(), 20);
         this.footRay = new BABYLON.Ray(BABYLON.Vector3.Zero(), new BABYLON.Vector3(0, -1, 0), 1.5);
 
         this.camera.parent = this.head;
@@ -131,7 +130,9 @@ export class Player {
         this.stateMachine.update();
         if (this.stateMachine.checkIfCanMove()) {
             // this.grapplingHook();
-            this.connectionManager.update()
+            if (this.playerData.hasLinkPower) {
+                this.connectionManager.update()
+            }
             this.updateFootRay()
             this.updateRayPos(this.pickRay);
             this.checkPickRayHit();
@@ -140,21 +141,21 @@ export class Player {
             this.isOutOfBound()
         }
 
-        // debug
-        if (this.input.justPressed["debug"]) {
-            const txt = `new BABYLON.Vector3(${this.character._position.x.toFixed(1)}, ${this.character._position.y.toFixed(1)}, ${this.character._position.z.toFixed(1)})`
-            navigator.clipboard.writeText(txt);
-            console.log(this.character._position)
-            console.log(BABYLON.Tools.ToDegrees(this.head.rotation.y))
-            // this.stateMachine.currentState.nextState = this.stateMachine.states.dialog
-            // console.log(this.character._position.y)
-            // console.log(this.input.inputMap)
-            // this.respawn()
-            // console.log(this.velocity.y);
-            if (this.input.justPressed["KeyO"]) {
-                // this.playerData.canJump = !this.playerData.canJump
-            }
-        }
+        // // debug
+        // if (this.input.justPressed["debug"]) {
+        //     const txt = `new BABYLON.Vector3(${this.character._position.x.toFixed(1)}, ${this.character._position.y.toFixed(1)}, ${this.character._position.z.toFixed(1)})`
+        //     navigator.clipboard.writeText(txt);
+        //     console.log(this.character._position)
+        //     console.log(BABYLON.Tools.ToDegrees(this.head.rotation.y))
+        //     // this.stateMachine.currentState.nextState = this.stateMachine.states.dialog
+        //     // console.log(this.character._position.y)
+        //     // console.log(this.input.inputMap)
+        //     // this.respawn()
+        //     // console.log(this.velocity.y);
+        // }
+        // if (this.input.justPressed["KeyO"]) {
+        //     // this.playerData.canJump = !this.playerData.canJump
+        // }
 
 
         this.input.update()
@@ -354,6 +355,7 @@ export class Player {
                 this.highlight.addMesh(pickInfo.pickedMesh, BABYLON.Color3.White());
                 this.outliner.addSelection(pickInfo.pickedMesh);
                 dialogCrosshair.style.display = "none"
+                interactCrosshair.style.display = "block"
 
                 if (pickInfo.pickedMesh.metadata?.onInteract && this.input.justPressed["interact"]) {
                     pickInfo.pickedMesh.metadata.onInteract();
@@ -363,6 +365,7 @@ export class Player {
                 this.highlight.removeAllMeshes()
                 this.outliner.clearSelection();
                 dialogCrosshair.style.display = "block"
+                interactCrosshair.style.display = "none"
                 if (pickInfo.pickedMesh.metadata && this.input.justPressed["interact"]) {
                     const param = [pickInfo.pickedMesh.metadata.onEnter, pickInfo.pickedMesh.metadata.onExit]
                     this.stateMachine.switchState(this.stateMachine.states.dialog, param)
@@ -372,12 +375,14 @@ export class Player {
                 this.highlight.removeAllMeshes()
                 this.outliner.clearSelection();
                 dialogCrosshair.style.display = "none"
+                interactCrosshair.style.display = "none"
             }
         }
         else {
             this.highlight.removeAllMeshes()
             this.outliner.clearSelection();
             dialogCrosshair.style.display = "none"
+            interactCrosshair.style.display = "none"
         }
     }
 
@@ -458,47 +463,6 @@ export class Player {
         }
     }
 
-    grapplingHook() {
-        if (!this.playerData.hasGrapplingHook) {
-            return;
-        }
-        if (this.grapplingHookTimer > 0) {
-            this.grapplingHookTimer -= this.deltaTime;
-        }
-        if (this.grapplingHookTimer <= 0) {
-            this.line = BABYLON.MeshBuilder.CreateLines("grapplingHook", { points: [BABYLON.Vector3.Zero(), BABYLON.Vector3.Zero()], updatable: true, instance: this.line });
-            if (this.input.justPressed["mouseLeft"] && !this.isHoldingMesh && this.scene.alreadyLocked) {
-                this.grapplingHookTimer = this.GRAPPLING_HOOK_COOLDOWN;
-                this.updateRayPos(this.grapplingHookRay)
-                this.checkgrapplingHookRayHit(this.grapplingHookRay);
-            }
-        }
-    }
-
-    checkgrapplingHookRayHit(ray) {
-        const pickInfo = this.scene.pickWithRay(ray, (mesh) => {
-            return (mesh.physicsBody && !(mesh.physicsBody?.shape.isTrigger));
-        });
-        if (pickInfo.hit) {
-            let temp = this.velocity.clone().addInPlace(pickInfo.ray.direction.scale(30));
-            if (temp.y > 10) {
-                temp.y = 10;
-                this.velocity.copyFrom(temp);
-            }
-            else if (temp.y < -10) {
-                temp.y = -10;
-                this.velocity.copyFrom(temp);
-            }
-            else {
-                this.velocity.addInPlace(pickInfo.ray.direction.scale(30));
-            }
-            this.lowFriction = true
-            // A FAIRE tester d'enlever une direction x ou z pour regler bug qui bloque hauteur quand contre mur
-
-            this.line = BABYLON.MeshBuilder.CreateLines("grapplingHook", { points: [this.character._position, pickInfo.pickedPoint], updatable: true, instance: this.line });
-        }
-    }
-
     resetPos() {
         this.dropHeldMesh();
         this.character.setPosition(this.respawnPos);
@@ -532,5 +496,9 @@ export class Player {
         if (this.player.position.y < -20) {
             this.respawn()
         }
+    }
+    mapChange() {
+        this.dropHeldMesh();
+        this.connectionManager.exitConnectionMode()
     }
 }
