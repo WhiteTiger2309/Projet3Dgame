@@ -3,12 +3,20 @@ import { addStaticPhysics, placeOnMesh } from '../utils/utils'
 import { Door } from './Door.js';
 import { Source } from './Source.js';
 
-export class PressurePlate extends Source{
+export class PressurePlate extends Source {
 
     constructor(main, position, rotation, canBeRewired, connectedTo = null) {
         super(main, position, rotation, canBeRewired, connectedTo)
         this.defaultPos = placeOnMesh(main, position)
         this.mesh = this.createMesh(position, rotation)
+        this.isActivated = false
+    }
+
+    onConnect(target) {
+        this.connectedTo = target;
+        if (this.isActivated) {
+            this.activate();
+        }
     }
 
     createMesh(pos) {

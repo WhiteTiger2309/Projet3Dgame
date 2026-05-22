@@ -3,14 +3,13 @@ const BASE = import.meta.env.BASE_URL || '/';
 
 import { CreateMap } from './CreateMap.js';
 import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createAntiBoxGate, placeOnMesh, createGrabbableObject, createShip } from './utils/utils.js';
-import { Map } from './Map.js';
 import { MapLab } from './MapLab.js';
 
 export class MapStart extends CreateMap {
     constructor(main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
         if (PLAYER_SPAWN_POS == undefined) {
-            // PLAYER_SPAWN_POS = new BABYLON.Vector3(28.0, 1.9, -6.6)
-            PLAYER_SPAWN_POS = new BABYLON.Vector3(34.7, 8.0, 41.9)
+            // PLAYER_SPAWN_POS = new BABYLON.Vector3(24.7, 7.6, 33.4)
+            PLAYER_SPAWN_POS = new BABYLON.Vector3(26.3, 8.2, 41.8)
         }
         if (PLAYER_SPAWN_ROTATION == undefined) {
             PLAYER_SPAWN_ROTATION = 177
@@ -25,10 +24,17 @@ export class MapStart extends CreateMap {
         await this.createLandscapeGround(this.scene);
         this.createTerrain(new BABYLON.Vector3(30, 1, 20));
         this.createDoors(new BABYLON.Vector3(30, 1, 20));
-        // this.createCard(new BABYLON.Vector3(37.8, 3, -17.2))
 
-        createShip(this.main, placeOnMesh(this.main, new BABYLON.Vector3(35.4, 7.7, 40.3)), BABYLON.Tools.ToRadians(90))
+        createShip(this.main, placeOnMesh(this.main, new BABYLON.Vector3(26.3, 8, 40)), BABYLON.Tools.ToRadians(90))
         createMapChangeGate(this.main, MapLab, new BABYLON.Vector3(29, 0, -20.8), undefined, BABYLON.Tools.ToRadians(180))
+        createTrigger(this.main, "jumpTuto", new BABYLON.Vector3(28.2, 1.9, 1.7), 10, 5, 3,
+            () => {
+                tipsOverlay.style.display = "block"
+                tipsOverlay.innerText = "Space to jump"
+            },
+            () => {
+                tipsOverlay.style.display = "none"
+            })
     }
 
     mapBeforeRenderUpdate() {
@@ -36,11 +42,10 @@ export class MapStart extends CreateMap {
     }
 
     createTerrain(pos) {
-        const ground = createMeshFromAsset(this.main.assets["terrain"], pos, "MESH")
+        const ground = createMeshFromAsset(this.main.assets["terrain"], pos, "MESH", undefined, false)
         ground.getDescendants().forEach(mesh => {
-            if (mesh.name == "cardReaderTrigger") {
+            if (mesh.name == "invisibleWalls") {
                 mesh.isVisible = false;
-                mesh.metadata.aggregate.shape.isTrigger = true;
             }
         })
     }
@@ -54,12 +59,6 @@ export class MapStart extends CreateMap {
         doorsOpen.stop();
         doorsOpen.play();
     }
-
-    // createCard(pos) {
-    //     const card = createMeshFromAsset(this.main.assets["accesCard"], pos, "BOX", undefined, false).getDescendants()[0]
-    //     createGrabbableObject(this.main, pos, card)
-    // }
-
 
     createLandscapeGround(scene) {
         return new Promise((resolve) => {

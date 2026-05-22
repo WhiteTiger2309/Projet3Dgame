@@ -1,47 +1,56 @@
 export class DialogManager {
-    constructor() {
+    constructor(main) {
         this.lineIndex = 0
         this.dialog = {
-            "testDialog": [
+            "Dialog1": [
                 {
-                    text: "test message 1",
+                    text: "Tu m'as libéré.",
                 },
                 {
-                    text: "test message 2",
+                    text: "Je vais t'ouvrir la porte.",
                 },
                 {
-                    text: "test message 3",
-                    action: () => this.currentDialog = "Dialog2"
+                    action: () => {
+                        main.map.robot.activateDoor()
+                        this.changeDialog("Dialog2")
+                    }
                 }
             ],
             "Dialog2": [
                 {
-                    text: "Dialog2  1",
+                    text: "Et voilà.",
+                }
+            ],
+            "DialogTuto": [
+                {
+                    text: "Tu peux maintenant appuyer sur A pour passer en mode lien.",
                 },
                 {
-                    text: "Dialog2  2",
+                    text: "Une fois en mode lien, tu peux appuyer sur clic gauche en visant un objet pour le sélectionner, ce qui crée un lien. Lorsque tu sélectionnes un deuxième objet, ils seront liés.",
                 },
                 {
-                    text: "Dialog2  3",
-                    action: () => console.log("fin !")
+                    text: "Tu peux uniquement relier des objets entourés de rouge qui sont des interrupteurs ou des plaques aux portes entourées de vert.",
                 }
             ],
         }
-        this.currentDialog = "testDialog"
-        this.updateCurrentLine()
+        this.changeDialog("Dialog1")
     }
 
     nextLine() {
+        let res = false
         if (this.lineIndex + 1 >= this.dialog[this.currentDialog].length) {
             return false
         }
         else {
             this.lineIndex++
             this.updateCurrentLine()
+            if (this.currentLine) {
+                res = true
+            }
             if (this.dialog[this.currentDialog][this.lineIndex].action) {
                 this.dialog[this.currentDialog][this.lineIndex].action()
             }
-            return true
+            return res
         }
     }
 
@@ -52,5 +61,10 @@ export class DialogManager {
 
     updateCurrentLine() {
         this.currentLine = this.dialog[this.currentDialog][this.lineIndex].text
+    }
+
+    changeDialog(dialogName) {
+        this.currentDialog = dialogName
+        this.resetDialog()
     }
 }

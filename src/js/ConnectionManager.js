@@ -49,7 +49,12 @@ export class ConnectionManager {
 
         // peut etre changer pour juste rendre visible / invisible
         this.connectables.forEach(connectable => {
-            this.highlightLayer.addMesh(connectable.mesh, BABYLON.Color3.Green());
+            if (connectable.type == "source") {
+                this.highlightLayer.addMesh(connectable.mesh, BABYLON.Color3.Red());
+            }
+            else {
+                this.highlightLayer.addMesh(connectable.mesh, BABYLON.Color3.Green());
+            }
         });
         this.lines.forEach(line => {
             line.mesh.isVisible = true
@@ -107,7 +112,7 @@ export class ConnectionManager {
         if (!this.firstSelected) {
             this.disconect(obj);
             this.firstSelected = obj;
-            console.log("First selected:", obj);
+            // console.log("First selected:", obj);
         } else {
             this.connect(this.firstSelected, obj);
             this.firstSelected = null;
@@ -116,7 +121,7 @@ export class ConnectionManager {
 
     connect(a, b) {
         if (a.type === b.type) {
-            console.log("Connexion invalide");
+            // console.log("Connexion invalide");
             return;
         }
         this.disconect(b);
@@ -131,7 +136,7 @@ export class ConnectionManager {
             this.createConnectionLine(emitter, receiver)
         }
 
-        console.log("Connected:", emitter, "->", receiver);
+        // console.log("Connected:", emitter, "->", receiver);
     }
 
     disconect(obj) {

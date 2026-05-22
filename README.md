@@ -1,9 +1,17 @@
-Mathis ANDRÉ
+Mathis ANDRÉ  
 Marc DI RUSO
+
+# Lancer le jeu
+
+Lien vers le jeu : https://whitetiger2309.github.io/Projet3Dgame/
 
 # Installation
 
 ```bash
+git clone https://github.com/gamesonweb/ia-edition-last-signal.git
+
+cd ia-edition-last-signal.git
+
 npm install
 ```
 

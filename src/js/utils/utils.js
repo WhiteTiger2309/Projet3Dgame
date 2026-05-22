@@ -91,18 +91,31 @@ export function createGrabbableObject(main, pos, mesh) {
     return mesh
 }
 
+export function createTrigger(main, name, pos, width, depth, height, enterFunc, exitFunc) {
+    const trigger = BABYLON.MeshBuilder.CreateBox(name, { width: width, depth: depth, height: height }, main.scene);
+    trigger.isPickable = false;
+    trigger.isVisible = false;
+    trigger.position = pos.clone();
+    const triggerAggregate = addStaticPhysics(trigger, "BOX");
+    triggerAggregate.shape.isTrigger = true;
+    main.havokPlugin.onTriggerCollisionObservable.add((ev) => {
+        if (ev.collider.transformNode.name === "CCTransformNode" && ev.collidedAgainst.transformNode.name === name) {
+            if (ev.type === "TRIGGER_ENTERED") {
+                enterFunc()
+            }
+            else if (ev.type === "TRIGGER_EXITED") {
+                exitFunc()
+            }
+        }
+    })
+}
+
 export function addTriggerObservable(havokPlugin, main) {
     havokPlugin.onTriggerCollisionObservable.add((ev) => {
         // console.log(ev.type, ':', ev.collider.transformNode.name, '-', ev.collidedAgainst.transformNode.name);
 
         const colliderData = ev.collider.transformNode.metadata
         const collidedData = ev.collidedAgainst.transformNode.metadata
-
-        // if ((ev.collider.transformNode.name === "accesCard" && ev.collidedAgainst.transformNode.name === "cardReaderTrigger") && ev.type === "TRIGGER_ENTERED") {
-        //     const doorsOpen = main.scene.getAnimationGroupByName("DoorOpening")
-        //     doorsOpen.play()
-        //     ev.collidedAgainst.dispose();
-        // }
 
         if ((ev.collider.transformNode.name === "box" && ev.collidedAgainst.transformNode.name === "AntiBoxGate") && ev.type === "TRIGGER_ENTERED") {
             colliderData.respawn()
@@ -169,7 +182,7 @@ export function fade(func) {
  * @param spawnRotation {Vector3} - The rotation of the player spawn
  */
 export async function changeMap(mapToLoad, main, spawnPos, spawnRotation) {
-    main.player.dropHeldMesh();
+    main.player.mapChange()
     main.scene.meshes.filter(mesh => mesh.name !== "preview").forEach(mesh => mesh.dispose());
     main.scene.lights.filter(light => light.name !== "hemi").forEach(light => light.dispose());
     while (main.scene.animationGroups.length) {
@@ -180,6 +193,7 @@ export async function changeMap(mapToLoad, main, spawnPos, spawnRotation) {
     main.scene.onBeforeRenderObservable.clear()
     const map = new mapToLoad(main, spawnPos, spawnRotation);
     await map.createMap()
+    main.map = map
     main.scene.registerBeforeRender(() => {
         map.beforeRenderUpdate();
     })

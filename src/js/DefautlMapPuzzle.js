@@ -23,7 +23,6 @@ export class DefautlMapPuzzle extends CreateMap {
 
     async createMap() {
         this.createLab(new BABYLON.Vector3(0, 0, 0));
-        this.exitDoor = new Door(this.main, new BABYLON.Vector3(-0.1, 0, -12.8), 0, false, "y", 3)
 
         this.gate = createMapChangeGate(this.main, MapPuzzle1, new BABYLON.Vector3(-0.1, 0, -13.5), undefined, 180);
         this.createPuzzle();
@@ -40,8 +39,8 @@ export class DefautlMapPuzzle extends CreateMap {
 
     // TODO changer lumières
     createLights(scene) {
-        this.light = new BABYLON.PointLight("labLight1", new BABYLON.Vector3(-4.8, 1.9, -1.7), scene);
-        this.light.intensity = 100.25;
+        this.light = new BABYLON.PointLight("labLight1", new BABYLON.Vector3(0, 4, 0), scene);
+        this.light.intensity = 75;
         this.main.mainLight.intensity = 0.2;
         this.main.mainLight.direction.y = 0;
     }

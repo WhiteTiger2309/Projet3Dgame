@@ -7,7 +7,7 @@ export class DialogState extends State {
         this.player = player;
         this.stateMachine = stateMachine;
         this.canMove = false;
-        this.dialogManager = new DialogManager()
+        this.dialogManager = new DialogManager(player.main)
     }
 
     setStates() {
@@ -15,7 +15,7 @@ export class DialogState extends State {
     }
 
     enter(functions) {
-        console.log("Enter Dialog");
+        // console.log("Enter Dialog");
         dialogBox.style.display = "block"
         dialogCrosshair.style.display = "none"
         dialogBox.innerText = this.dialogManager.currentLine
@@ -36,7 +36,7 @@ export class DialogState extends State {
     }
 
     exit() {
-        console.log("Exit Dialog");
+        // console.log("Exit Dialog");
         dialogBox.style.display = "none"
         this.dialogManager.resetDialog()
         this.onExit()

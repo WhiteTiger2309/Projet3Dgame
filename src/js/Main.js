@@ -9,7 +9,6 @@ import "@babylonjs/core/Shaders/selection.vertex";
 import { addTriggerObservable } from './utils/utils.js';
 import { AssetsLoader } from './utils/AssetsLoader.js';
 
-import { Map } from './Map.js';
 import { MapStart } from './MapStart.js';
 import { MapLab } from './MapLab.js';
 import { MapTest } from './Map_test.js';
@@ -33,13 +32,11 @@ export class Main {
         this.assetsReady = false;
         this.isGameRunning = false;
         this.menuOverlay = null;
-        this.menuStatus = null;
         this.menuStartButton = null;
         this.menuQuitButton = null;
         this.menuMusic = null;
         this.menuMusicStarted = false;
         this.menuAudioContext = null;
-        this.menuAmbienceNodes = [];
         this.menuAmbienceStarted = false;
 
         window.addEventListener("resize", () => this.engine.resize())
@@ -67,7 +64,6 @@ export class Main {
             this.startMenuMusic();
         } catch (error) {
             console.error(error);
-            this.setMenuStatus("Erreur pendant le chargement des ressources.");
             this.setMenuButtonsEnabled(false);
             return;
         }
@@ -103,6 +99,7 @@ export class Main {
             }
             if (!this.scene.alreadyLocked) {
                 this.canvas.requestPointerLock();
+                this.canvas.focus()
             }
         };
 
@@ -116,25 +113,16 @@ export class Main {
 
     setupMenu() {
         this.menuOverlay = document.querySelector("#mainMenu");
-        this.menuStatus = document.querySelector("#mainMenuStatus");
         this.menuStartButton = document.querySelector("#menuStartButton");
         this.menuQuitButton = document.querySelector("#menuQuitButton");
 
         this.setMenuButtonsEnabled(false);
-        this.setMenuStatus("Chargement des ressources...");
         this.setHudVisible(false);
 
-        this.menuOverlay?.addEventListener("pointerdown", () => this.ensureMenuAudioStarted());
         this.menuStartButton?.addEventListener("pointerenter", () => this.playMenuUiTone(880, 0.045));
         this.menuQuitButton?.addEventListener("pointerenter", () => this.playMenuUiTone(620, 0.035));
         this.menuStartButton?.addEventListener("click", () => this.onStartClicked());
         this.menuQuitButton?.addEventListener("click", () => this.quitGame());
-    }
-
-    setMenuStatus(message) {
-        if (this.menuStatus) {
-            this.menuStatus.textContent = message;
-        }
     }
 
     setMenuButtonsEnabled(enabled) {
@@ -153,27 +141,6 @@ export class Main {
 
     hideMenu() {
         this.menuOverlay?.classList.add("hidden");
-    }
-
-    ensureMenuAudioStarted() {
-        this.startMenuMusic();
-    }
-
-    scheduleMenuPing() {
-        if (!this.menuAmbienceStarted) {
-            return;
-        }
-
-        const pingAt = () => {
-            if (!this.menuAmbienceStarted) {
-                return;
-            }
-
-            this.playMenuUiTone(1240, 0.03, 0.008);
-            window.setTimeout(pingAt, 14500 + Math.random() * 8000);
-        };
-
-        window.setTimeout(pingAt, 4500);
     }
 
     playMenuUiTone(frequency, duration, volume = 0.018) {
@@ -217,20 +184,6 @@ export class Main {
     stopMenuAudio() {
         this.stopMenuMusic();
         this.menuAmbienceStarted = false;
-        this.menuAmbienceNodes.forEach((node) => {
-            try {
-                node.stop?.();
-            } catch {
-                // noop
-            }
-
-            try {
-                node.disconnect?.();
-            } catch {
-                // noop
-            }
-        });
-        this.menuAmbienceNodes = [];
 
         if (this.menuAudioContext && this.menuAudioContext.state !== "closed") {
             try {
@@ -284,10 +237,8 @@ export class Main {
             return;
         }
 
-        this.ensureMenuAudioStarted();
         this.playMenuUiTone(720, 0.06, 0.02);
         this.setMenuButtonsEnabled(false);
-        this.setMenuStatus("Accès au pont principal...");
 
         try {
             this.stopMenuMusic();
@@ -295,10 +246,8 @@ export class Main {
             this.stopMenuAudio();
             this.hideMenu();
             this.setHudVisible(true);
-            this.setMenuStatus("Jeu lancé.");
         } catch (error) {
             console.error(error);
-            this.setMenuStatus("Impossible de lancer la partie.");
             this.setMenuButtonsEnabled(true);
             this.isGameRunning = false;
         }
@@ -310,6 +259,8 @@ export class Main {
         }
 
         this.isGameRunning = true;
+        this.scene.simulatePointerDown(this.canvas)
+
         this.createPlayer();
         this.scene.activeCamera = this.player.camera;
 
