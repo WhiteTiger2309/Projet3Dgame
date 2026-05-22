@@ -1,6 +1,6 @@
 import * as BABYLON from '@babylonjs/core'
 
-import { createMapChangeGate, addStaticPhysics } from './utils/utils.js';
+import { createDiegeticTeleportMarker, createMapChangeGate, addStaticPhysics, createMeshFromAsset, placeOnMesh } from './utils/utils.js';
 import { createEmissiveStripTexture, createPbrPanelMaterial } from './utils/materials.js';
 import { MapLazer } from './Map_lazer.js';
 import { MapLazer3 } from './Map_lazer3.js';
@@ -31,18 +31,7 @@ export class MapLazer2 extends MapLazer {
         const gatePos = new BABYLON.Vector3(this.roomBoundaryX(0) + 2.4, 0, 0);
         createMapChangeGate(this.main, MapLazer3, gatePos, undefined, 90);
 
-        // Marqueur visible: permet de repérer clairement le téléporteur.
-        const marker = BABYLON.MeshBuilder.CreateCylinder(
-            'lazer2TeleportMarker',
-            { diameter: 1.4, height: 2.4, tessellation: 24 },
-            this.scene
-        );
-        marker.isPickable = false;
-        marker.position = gatePos.clone();
-        marker.position.y += 1.2;
-        const mat = new BABYLON.StandardMaterial('lazer2TeleportMarkerMat', this.scene);
-        mat.emissiveColor = new BABYLON.Color3(0.3, 0.8, 1.0);
-        marker.material = mat;
+        createDiegeticTeleportMarker(this.scene, gatePos, 'lazer2');
     }
 
     createLightingAccent(scene) {
@@ -94,13 +83,13 @@ export class MapLazer2 extends MapLazer {
             return p;
         };
 
-        makePillar('r2_pillar', this.roomCenterX(0) + 2.2, -2.2, 1.8, 4.2, 1.8);
+        makePillar('r2_pillar', this.roomCenterX(0) , -1, 1.8, 4.2, 1.8);
     }
 
     createHintPanels(scene) {
-        const z = -(this.ROOM_DEPTH / 2) + 1.2;
-        const xOffset = -(this.ROOM_LENGTH / 2) + 2.6;
-        const pos = new BABYLON.Vector3(this.roomCenterX(0) + xOffset, 3.4, z);
+        const z = -(this.ROOM_DEPTH / 2) + 10.2;
+        const xOffset = -(this.ROOM_LENGTH / 2) - 1.5;
+        const pos = new BABYLON.Vector3(this.roomCenterX(1) + xOffset, 8.4, z);
         this.createHintPanel('hint_room_2', pos, 'SALLE 2 — Miroir fixe: rebondis sur le miroir pour toucher le capteur.');
     }
 
@@ -114,6 +103,76 @@ export class MapLazer2 extends MapLazer {
         this.sensors = [];
         this.shutters = [];
         this.splitters = [];
+
+        const placeTurretLikeRobot = (emitter, emitterYaw = 0) => {
+            if (!this.main?.assets?.turret) {
+                return null;
+            }
+
+            const pos = emitter.mesh.getAbsolutePosition().clone();
+            placeOnMesh(this.main, pos);
+
+            const TURRET_Y_OFFSET = -0.2;
+            pos.y += TURRET_Y_OFFSET;
+
+            const turret = createMeshFromAsset(
+                this.main.assets['turret'],
+                pos,
+                'MESH',
+                BABYLON.Tools.ToRadians(90),
+                false
+            );
+
+            turret.scaling = new BABYLON.Vector3(0.9, 0.9, 0.9);
+            turret.rotationQuaternion = null;
+            turret.rotation.y = emitterYaw;
+
+            let proxyAssigned = false;
+            turret.getDescendants().forEach(mesh => {
+                try { mesh.isVisible = true; } catch {}
+                try {
+                    if (!proxyAssigned && mesh.getBoundingInfo) {
+                        mesh.isPickable = true;
+                        mesh.metadata = mesh.metadata || {};
+                        if (emitter.mesh?.metadata?.isInteractable) {
+                            mesh.metadata.isInteractable = true;
+                            mesh.metadata.onInteract = () => this.toggleLaserControl({ type: 'emitter', id: emitter.id });
+                        }
+                        proxyAssigned = true;
+                    } else {
+                        mesh.isPickable = false;
+                    }
+                } catch {}
+            });
+            if (!proxyAssigned) {
+                try {
+                    turret.isPickable = true;
+                    turret.metadata = turret.metadata || {};
+                    if (emitter.mesh?.metadata?.isInteractable) {
+                        turret.metadata.isInteractable = true;
+                        turret.metadata.onInteract = () => this.toggleLaserControl({ type: 'emitter', id: emitter.id });
+                    }
+                } catch {}
+            }
+
+            try {
+                const haloMat = new BABYLON.StandardMaterial(`${emitter.id}_halo_mat`, scene);
+                haloMat.emissiveColor = new BABYLON.Color3(0.12, 0.95, 0.8);
+                haloMat.alpha = 0.9;
+
+                const halo = BABYLON.MeshBuilder.CreateTorus(`${emitter.id}_halo`, { diameter: 1.6, thickness: 0.08, tessellation: 32 }, scene);
+                halo.parent = turret;
+                halo.position = new BABYLON.Vector3(0, 0.18, 0);
+                halo.rotation.x = Math.PI / 2;
+                halo.material = haloMat;
+                halo.isPickable = false;
+
+                emitter.turretHalo = halo;
+            } catch {}
+
+            try { emitter.turret = turret; } catch {}
+            return turret;
+        };
 
         const makeEmitter = ({ id, position, color, yaw = 0, pitch = 0, interactive = true, fixed = false }) => {
             const mesh = BABYLON.MeshBuilder.CreateCylinder(id, {
@@ -264,7 +323,11 @@ export class MapLazer2 extends MapLazer {
             r2Yaw = Math.atan2(nn.x, nn.z);
         }
 
-        makeEmitter({ id: 'r2_emitter', position: r2EmitterPos, color: new BABYLON.Color3(0.9, 0.15, 1.0) });
+        const e2 = makeEmitter({ id: 'r2_emitter', position: r2EmitterPos, color: new BABYLON.Color3(0.9, 0.15, 1.0) });
+        const turret2 = placeTurretLikeRobot(e2, e2.yaw);
+        if (turret2) {
+            try { e2.mesh.isVisible = false; } catch {}
+        }
         makeMirror({ id: 'r2_mirror', position: r2MirrorPos, yaw: r2Yaw, pitch: 0, interactive: false, color: new BABYLON.Color3(0.2, 0.95, 1.0) });
         makeSensorCylinder({ id: 'r2_sensor', position: r2SensorPos, colorOff: new BABYLON.Color3(0.2, 0.95, 1.0), colorOn: new BABYLON.Color3(0.12, 0.95, 0.22) });
 

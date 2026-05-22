@@ -16,6 +16,9 @@ import { MapTest } from './Map_test.js';
 import { MapLazer } from './Map_lazer.js';
 import { Player } from './Player.js';
 import { SoundManager } from './utils/SoundManager.js';
+import { MapLazer3 } from './Map_lazer3.js';
+import { MapLazer1 } from './Map_lazer1.js';
+import { MapLazer2 } from './Map_lazer2.js';
 
 export class Main {
 

@@ -1,6 +1,6 @@
 import * as BABYLON from '@babylonjs/core'
 
-import { addStaticPhysics, createMapChangeGate } from './utils/utils.js';
+import { addStaticPhysics, createDiegeticTeleportMarker, createMapChangeGate, createMeshFromAsset, placeOnMesh } from './utils/utils.js';
 import { createEmissiveStripTexture, createPbrPanelMaterial } from './utils/materials.js';
 import { MapLazer } from './Map_lazer.js';
 import { MapLab } from './MapLab.js';
@@ -35,18 +35,7 @@ export class MapLazer4 extends MapLazer {
         const gatePos = new BABYLON.Vector3(this.roomBoundaryX(0) + 2.4, 0, 0);
         createMapChangeGate(this.main, MapLab, gatePos, undefined, 90);
 
-        // Marqueur visible: permet de repérer clairement le téléporteur.
-        const marker = BABYLON.MeshBuilder.CreateCylinder(
-            'lazer4TeleportMarker',
-            { diameter: 1.4, height: 2.4, tessellation: 24 },
-            this.scene
-        );
-        marker.isPickable = false;
-        marker.position = gatePos.clone();
-        marker.position.y += 1.2;
-        const mat = new BABYLON.StandardMaterial('lazer4TeleportMarkerMat', this.scene);
-        mat.emissiveColor = new BABYLON.Color3(0.3, 0.8, 1.0);
-        marker.material = mat;
+        createDiegeticTeleportMarker(this.scene, gatePos, 'lazer4');
     }
 
     mapBeforeRenderUpdate() {
@@ -150,9 +139,9 @@ export class MapLazer4 extends MapLazer {
     }
 
     createHintPanels(scene) {
-        const z = -(this.ROOM_DEPTH / 2) + 1.2;
-        const xOffset = -(this.ROOM_LENGTH / 2) + 2.6;
-        const pos = new BABYLON.Vector3(this.roomCenterX(0) + xOffset, 3.4, z);
+        const z = -(this.ROOM_DEPTH / 2) + 10.2;
+        const xOffset = -(this.ROOM_LENGTH / 2) - 1.5;
+        const pos = new BABYLON.Vector3(this.roomCenterX(1) + xOffset, 8.4, z);
         this.createHintPanel(
             'hint_combo_room',
             pos,
@@ -169,6 +158,77 @@ export class MapLazer4 extends MapLazer {
         this.sensors = [];
         this.shutters = [];
         this.splitters = [];
+
+        const placeTurretLikeRobot = (emitter, emitterYaw = 0) => {
+            if (!this.main?.assets?.turret) {
+                return null;
+            }
+
+            const pos = emitter.mesh.getAbsolutePosition().clone();
+            placeOnMesh(this.main, pos);
+            const TURRET_Y_OFFSET = -0.2;
+            pos.y += TURRET_Y_OFFSET;
+
+            const turret = createMeshFromAsset(
+                this.main.assets['turret'],
+                pos,
+                'MESH',
+                BABYLON.Tools.ToRadians(90),
+                false
+            );
+
+            turret.scaling = new BABYLON.Vector3(0.9, 0.9, 0.9);
+            turret.rotationQuaternion = null;
+            turret.rotation.y = emitterYaw;
+
+            let proxyAssigned = false;
+            turret.getDescendants().forEach(mesh => {
+                try { mesh.isVisible = true; } catch {}
+                try {
+                    mesh.metadata = mesh.metadata || {};
+                    mesh.metadata.laserBlocker = false;
+                    mesh.metadata.laserReflector = false;
+                    if (!proxyAssigned && mesh.getBoundingInfo) {
+                        mesh.isPickable = true;
+                        if (emitter.mesh?.metadata?.isInteractable) {
+                            mesh.metadata.isInteractable = true;
+                            mesh.metadata.onInteract = () => this.toggleLaserControl({ type: 'emitter', id: emitter.id });
+                        }
+                        proxyAssigned = true;
+                    } else {
+                        mesh.isPickable = false;
+                    }
+                } catch {}
+            });
+            if (!proxyAssigned) {
+                try {
+                    turret.isPickable = true;
+                    turret.metadata = turret.metadata || {};
+                    if (emitter.mesh?.metadata?.isInteractable) {
+                        turret.metadata.isInteractable = true;
+                        turret.metadata.onInteract = () => this.toggleLaserControl({ type: 'emitter', id: emitter.id });
+                    }
+                } catch {}
+            }
+
+            try {
+                const haloMat = new BABYLON.StandardMaterial(`${emitter.id}_halo_mat`, scene);
+                haloMat.emissiveColor = new BABYLON.Color3(0.12, 0.95, 0.8);
+                haloMat.alpha = 0.9;
+
+                const halo = BABYLON.MeshBuilder.CreateTorus(`${emitter.id}_halo`, { diameter: 1.6, thickness: 0.08, tessellation: 32 }, scene);
+                halo.parent = turret;
+                halo.position = new BABYLON.Vector3(0, 0.18, 0);
+                halo.rotation.x = Math.PI / 2;
+                halo.material = haloMat;
+                halo.isPickable = false;
+
+                emitter.turretHalo = halo;
+            } catch {}
+
+            try { emitter.turret = turret; } catch {}
+            return turret;
+        };
 
         // Electric puzzle dans la salle 0.
         const c0 = this.roomCenterX(0);
@@ -320,6 +380,11 @@ export class MapLazer4 extends MapLazer {
             fixed: true,
         });
 
+        const comboTurret = placeTurretLikeRobot(e, e.yaw);
+        if (comboTurret) {
+            try { e.mesh.isVisible = false; } catch {}
+        }
+
         makeMirror({
             id: 'r10_combo_mirror',
             position: mirrorPos,
@@ -387,9 +452,10 @@ export class MapLazer4 extends MapLazer {
             if (!s?.mat || !s?.colorOff || !s?.colorOn) continue;
 
             const t = sensorsHit[s.id] ? 1 : 0;
+            const pulse = sensorsHit[s.id] ? (0.95 + 0.05 * Math.sin((this._now || 0) * 0.01 + (s.id.charCodeAt(1) || 0))) : 1;
             const off = s.colorOff.scale(0.35);
             const on = s.colorOn.scale(2.0);
-            s.mat.emissiveColor = BABYLON.Color3.Lerp(off, on, BABYLON.Scalar.Clamp(t, 0, 1));
+            s.mat.emissiveColor = BABYLON.Color3.Lerp(off, on, BABYLON.Scalar.Clamp(t, 0, 1)).scale(pulse);
         }
 
         const openDoor = (doorIndex, condition) => {

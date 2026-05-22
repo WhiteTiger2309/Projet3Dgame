@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core'
 const BASE = import.meta.env.BASE_URL || '/';
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics } from './utils/utils.js';
+import { addStaticPhysics, createMeshFromAsset } from './utils/utils.js';
 import { createSciFiPanelTexture, createSciFiEmissiveLinesTexture, createPbrPanelMaterial, createEmissiveStripTexture } from './utils/materials.js';
 
 export class MapLazer extends CreateMap {
@@ -21,9 +21,13 @@ export class MapLazer extends CreateMap {
         const CORRIDOR_LENGTH = ROOM_COUNT * ROOM_LENGTH;
         const ROOM0_CENTER_X = (-CORRIDOR_LENGTH / 2) + (ROOM_LENGTH / 2);
 
-        // Spawn en Salle 1.
-        PLAYER_SPAWN_POS = new BABYLON.Vector3(ROOM0_CENTER_X - 6, 2, 0);
-        PLAYER_SPAWN_ROTATION = 1.57;
+        // Spawn par défaut en Salle 1, mais on conserve le spawn reçu lors d'un changement de map.
+        if (PLAYER_SPAWN_POS == undefined) {
+            PLAYER_SPAWN_POS = new BABYLON.Vector3(ROOM0_CENTER_X - 6, 2, 0);
+        }
+        if (PLAYER_SPAWN_ROTATION == undefined) {
+            PLAYER_SPAWN_ROTATION = 1.57;
+        }
 
         super(PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION, main);
 
@@ -143,7 +147,6 @@ export class MapLazer extends CreateMap {
             return BABYLON.Quaternion.Identity();
         }
         if (dot < -0.999999) {
-            // 180° flip
             return BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Right(), Math.PI);
         }
 
@@ -184,17 +187,14 @@ export class MapLazer extends CreateMap {
             uniform vec3 beamColor;
 
             void main(void) {
-                // Thin core across the width (uv.x)
                 float x = abs(vUV.x - 0.5) * 2.0;
                 float core = smoothstep(1.0, 0.0, x);
                 core = pow(core, 3.0);
 
-                // Animated pulses along the beam (uv.y)
                 float worldFreq = max(0.5, beamLength * 0.6);
                 float t = vUV.y * worldFreq - time * 6.5;
                 float pulse = 0.55 + 0.45 * sin(t * 6.2831853);
 
-                // Slight edge falloff to keep it very thin
                 float alpha = core * (0.65 + 0.35 * pulse);
                 alpha *= intensity;
 
@@ -769,6 +769,64 @@ export class MapLazer extends CreateMap {
         this.shutters = [];
         this.splitters = [];
 
+        const attachDeviceDetail = (parent, name, kind, material, options = {}) => {
+            let mesh = null;
+            if (kind === 'torus') {
+                mesh = BABYLON.MeshBuilder.CreateTorus(name, {
+                    diameter: options.diameter ?? 1.35,
+                    thickness: options.thickness ?? 0.08,
+                    tessellation: options.tessellation ?? 24,
+                }, scene);
+            } else if (kind === 'cylinder') {
+                mesh = BABYLON.MeshBuilder.CreateCylinder(name, {
+                    diameterTop: options.diameterTop ?? options.diameter ?? 0.55,
+                    diameterBottom: options.diameterBottom ?? options.diameter ?? 0.75,
+                    height: options.height ?? 0.45,
+                    tessellation: options.tessellation ?? 16,
+                }, scene);
+            } else if (kind === 'sphere') {
+                mesh = BABYLON.MeshBuilder.CreateSphere(name, {
+                    diameter: options.diameter ?? 0.28,
+                    segments: options.segments ?? 16,
+                }, scene);
+            }
+
+            if (!mesh) return null;
+            mesh.parent = parent;
+            mesh.position = new BABYLON.Vector3(0, options.y ?? 0, 0);
+            if (options.rotation) {
+                mesh.rotation = options.rotation.clone();
+            }
+            mesh.material = material;
+            mesh.isPickable = false;
+            return mesh;
+        };
+
+        const placeTurretLikeRobot = (emitterMesh, emitterYaw = 0) => {
+            if (!this.main?.assets?.turret) {
+                return null;
+            }
+
+            const turret = createMeshFromAsset(
+                this.main.assets["turret"],
+                emitterMesh.getAbsolutePosition().clone(),
+                "MESH",
+                BABYLON.Tools.ToRadians(90),
+                false
+            );
+
+            turret.scaling = new BABYLON.Vector3(0.9, 0.9, 0.9);
+            turret.rotationQuaternion = null;
+            turret.rotation.y = emitterYaw;
+
+            turret.getDescendants().forEach(mesh => {
+                try { mesh.isPickable = false; } catch {}
+                try { mesh.isVisible = true; } catch {}
+            });
+
+            return turret;
+        };
+
         const makeEmitter = ({ id, position, color, yaw = 0, pitch = 0, interactive = true, fixed = false }) => {
             const mesh = BABYLON.MeshBuilder.CreateCylinder(id, {
                 diameter: 0.8,
@@ -795,6 +853,33 @@ export class MapLazer extends CreateMap {
             const baseEmissive = mat.emissiveColor.clone();
             mesh.material = mat;
 
+            const turret = placeTurretLikeRobot(mesh, yaw);
+            if (turret) {
+                mesh.isVisible = false;
+                mesh.getChildren().forEach(c => { c.isVisible = false; });
+            }
+
+            attachDeviceDetail(mesh, `${id}_basePad`, 'cylinder', mat, {
+                diameterTop: 1.02,
+                diameterBottom: 1.15,
+                height: 0.18,
+                y: -1.02,
+                tessellation: 20,
+            });
+            attachDeviceDetail(mesh, `${id}_glowRing`, 'torus', mat, {
+                diameter: 1.28,
+                thickness: 0.08,
+                y: 0.08,
+                tessellation: 24,
+            });
+            attachDeviceDetail(mesh, `${id}_topCap`, 'cylinder', mat, {
+                diameterTop: 0.18,
+                diameterBottom: 0.55,
+                height: 0.55,
+                y: 1.06,
+                tessellation: 4,
+            });
+
             // Physique statique (décor), mais ne bloque pas le laser.
             try {
                 const agg = addStaticPhysics(mesh, 'BOX');
@@ -803,6 +888,24 @@ export class MapLazer extends CreateMap {
                 // noop
             }
 
+            attachDeviceDetail(mesh, `${id}_frame`, 'torus', mat, {
+                diameter: 1.88,
+                thickness: 0.06,
+                y: 0,
+                tessellation: 28,
+            });
+            attachDeviceDetail(mesh, `${id}_core`, 'cylinder', mat, {
+                diameterTop: 0.18,
+                diameterBottom: 0.84,
+                height: 0.30,
+                y: 0.78,
+                tessellation: 4,
+            });
+            attachDeviceDetail(mesh, `${id}_cap`, 'sphere', mat, {
+                diameter: 0.24,
+                y: 1.02,
+                segments: 16,
+            });
             mesh.metadata = {
                 ...(mesh.metadata || {}),
                 isInteractable: interactive && !fixed,
@@ -811,6 +914,7 @@ export class MapLazer extends CreateMap {
 
             const emitter = { id, mesh, yaw, pitch, initYaw: yaw, initPitch: pitch, fixed: !!fixed, baseEmissive, mat, color };
             this.emitters.push(emitter);
+
             return emitter;
         };
 
@@ -893,6 +997,25 @@ export class MapLazer extends CreateMap {
             }
 
             const sensor = { id, mesh, mat, mode, colorOff, colorOn };
+
+            attachDeviceDetail(mesh, `${id}_halo`, 'torus', mat, {
+                diameter: 1.55,
+                thickness: 0.07,
+                y: 0.0,
+                tessellation: 24,
+            });
+            attachDeviceDetail(mesh, `${id}_crystal`, 'cylinder', mat, {
+                diameterTop: 0.12,
+                diameterBottom: 0.80,
+                height: 0.70,
+                y: 0.92,
+                tessellation: 4,
+            });
+            attachDeviceDetail(mesh, `${id}_spark`, 'sphere', mat, {
+                diameter: 0.26,
+                y: 1.22,
+                segments: 16,
+            });
             this.sensors.push(sensor);
             this.puzzleState.sensors[id] = false;
             return sensor;
@@ -949,6 +1072,25 @@ export class MapLazer extends CreateMap {
             mat.emissiveColor = new BABYLON.Color3(0.05, 0.15, 0.25);
             const baseEmissive = mat.emissiveColor.clone();
             mesh.material = mat;
+
+            attachDeviceDetail(mesh, `${id}_halo`, 'torus', mat, {
+                diameter: 1.55,
+                thickness: 0.07,
+                y: 0.0,
+                tessellation: 24,
+            });
+            attachDeviceDetail(mesh, `${id}_crystal`, 'cylinder', mat, {
+                diameterTop: 0.12,
+                diameterBottom: 0.80,
+                height: 0.70,
+                y: 0.92,
+                tessellation: 4,
+            });
+            attachDeviceDetail(mesh, `${id}_spark`, 'sphere', mat, {
+                diameter: 0.26,
+                y: 1.22,
+                segments: 16,
+            });
 
             mesh.metadata = {
                 ...(mesh.metadata || {}),
@@ -1177,6 +1319,14 @@ export class MapLazer extends CreateMap {
             e.mat.emissiveColor = isActive
                 ? new BABYLON.Color3(2.2, 1.1, 0.35)
                 : e.baseEmissive.clone();
+
+            // update turret halo if present
+            if (e.turretHalo && e.turretHalo.material) {
+                try {
+                    e.turretHalo.material.emissiveColor = isActive ? new BABYLON.Color3(2.2, 1.1, 0.35) : new BABYLON.Color3(0.08, 0.12, 0.10);
+                    e.turretHalo.setEnabled(true);
+                } catch {}
+            }
         }
 
         for (const m of this.mirrors || []) {
@@ -1246,6 +1396,19 @@ export class MapLazer extends CreateMap {
             e.mesh.rotation.x = -e.pitch;
             e.mesh.rotation.y = e.yaw;
             e.mesh.rotation.z = Math.PI / 2;
+            if (e.turret) {
+                try {
+                    const dir = this.getDirectionFromYawPitch(e.yaw, e.pitch);
+                    const target = e.turret.position.add(dir);
+                    e.turret.lookAt(target);
+                    // corrective rotations:
+                    //  - rotate around X to make model stand upright
+                    //  - rotate around Y to turn the model 90deg to the left (photo viewpoint)
+                    //e.turret.rotationQuaternion = null;
+                    //e.turret.rotate(BABYLON.Axis.X, -Math.PI / 2, BABYLON.Space.LOCAL);
+                    //e.turret.rotate(BABYLON.Axis.Y, Math.PI / 2, BABYLON.Space.LOCAL);
+                } catch {}
+            }
         }
 
         for (const m of this.mirrors || []) {
@@ -1764,9 +1927,11 @@ export class MapLazer extends CreateMap {
             if (s.id === 'r5_sensor') t = charge.room5;
             if (s.id === 'r8_sensor') t = charge.room8;
 
+            const pulse = sensorsHit[s.id] ? (0.94 + 0.06 * Math.sin((this._now || 0) * 0.01 + (s.id.charCodeAt(1) || 0))) : 1;
+
             const off = s.colorOff.scale(0.35);
             const on = s.colorOn.scale(2.0);
-            s.mat.emissiveColor = BABYLON.Color3.Lerp(off, on, BABYLON.Scalar.Clamp(t, 0, 1));
+            s.mat.emissiveColor = BABYLON.Color3.Lerp(off, on, BABYLON.Scalar.Clamp(t, 0, 1)).scale(pulse);
         }
 
         // Portes: maintien avec fermeture retardée.
@@ -1830,6 +1995,7 @@ export class MapLazer extends CreateMap {
         }
 
         const EPS = 0.06;
+        const LASER_START_Y_OFFSET = 0.8; // élève légèrement le point de départ du rayon
         const MAX_DIST = Math.max(120, (this.CORRIDOR_LENGTH || 160) + 40);
         const MAX_BOUNCES = 5;
         const MAX_RAYS = 160;
@@ -1896,7 +2062,7 @@ export class MapLazer extends CreateMap {
             if (!e?.mesh) continue;
             if (e.enabled === false) continue;
             const dir = this.getDirectionFromYawPitch(e.yaw || 0, e.pitch || 0);
-            const start = e.mesh.getAbsolutePosition().add(dir.scale(1.25));
+            const start = e.mesh.getAbsolutePosition().add(dir.scale(1.25)).add(new BABYLON.Vector3(0, LASER_START_Y_OFFSET, 0));
             queue.push({ origin: start, dir, color: e.color || new BABYLON.Color3(1, 0.2, 0.2), depth: 0, ignore: e.mesh });
         }
 

@@ -28,6 +28,7 @@ export class MapStart extends CreateMap {
         // this.createCard(new BABYLON.Vector3(37.8, 3, -17.2))
 
         createShip(this.main, placeOnMesh(this.main, new BABYLON.Vector3(35.4, 7.7, 40.3)), BABYLON.Tools.ToRadians(90))
+        this.createTurretTest(this.getTurretTestPosition());
         createMapChangeGate(this.main, MapLab, new BABYLON.Vector3(29, 0, -20.8), undefined, BABYLON.Tools.ToRadians(180))
     }
 
@@ -53,6 +54,47 @@ export class MapStart extends CreateMap {
         const doorsOpen = this.scene.getAnimationGroupByName("DoorOpening")
         doorsOpen.stop();
         doorsOpen.play();
+    }
+
+    createTurretTest(pos) {
+        if (!this.main.assets["turret"]) {
+            console.warn('[MapStart] turret asset not available for test placement');
+            return null;
+        }
+
+        const turret = createMeshFromAsset(this.main.assets["turret"], pos, "MESH", BABYLON.Tools.ToRadians(90), false);
+        turret.scaling = new BABYLON.Vector3(0.9, 0.9, 0.9);
+
+        const descendants = turret.getDescendants().filter(mesh => mesh.getBoundingInfo);
+        let minY = Number.POSITIVE_INFINITY;
+        for (const mesh of descendants) {
+            const bb = mesh.getBoundingInfo();
+            if (bb && bb.boundingBox) {
+                const worldMin = bb.boundingBox.minimumWorld.y;
+                if (isFinite(worldMin) && worldMin < minY) {
+                    minY = worldMin;
+                }
+            }
+        }
+
+        if (isFinite(minY)) {
+            const delta = pos.y - minY;
+            turret.position.y += delta;
+            console.log(`[MapStart] turret test placed with dy=${delta.toFixed(3)}`);
+        }
+
+        return turret;
+    }
+
+    getTurretTestPosition() {
+        const spawnPos = this.player.respawnPos.clone();
+        const forward = new BABYLON.Vector3(
+            Math.sin(this.player.respawnRotation),
+            0,
+            Math.cos(this.player.respawnRotation)
+        );
+        const testPos = spawnPos.add(forward.scale(5));
+        return placeOnGround(this.ground, testPos.x, testPos.z);
     }
 
     // createCard(pos) {

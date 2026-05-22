@@ -43,6 +43,64 @@ export function createMapChangeGate(main, map, gatePos, playerSpawnPos, gateRota
     return trigger
 }
 
+export function createDiegeticTeleportMarker(scene, position, prefix, accentColor = new BABYLON.Color3(0.22, 0.85, 1.0)) {
+    const root = new BABYLON.TransformNode(`${prefix}_teleportMarker_root`, scene);
+    root.position = position.clone();
+
+    const baseMat = new BABYLON.StandardMaterial(`${prefix}_teleportMarker_baseMat`, scene);
+    baseMat.diffuseColor = new BABYLON.Color3(0.10, 0.12, 0.15);
+    baseMat.emissiveColor = accentColor.scale(0.16);
+    baseMat.specularColor = BABYLON.Color3.Black();
+
+    const glowMat = new BABYLON.StandardMaterial(`${prefix}_teleportMarker_glowMat`, scene);
+    glowMat.diffuseColor = accentColor.scale(0.45);
+    glowMat.emissiveColor = accentColor.scale(1.35);
+    glowMat.specularColor = BABYLON.Color3.Black();
+    glowMat.alpha = 0.92;
+
+    const pad = BABYLON.MeshBuilder.CreateCylinder(`${prefix}_teleportMarker_pad`, {
+        diameter: 2.0,
+        height: 0.10,
+        tessellation: 24,
+    }, scene);
+    pad.parent = root;
+    pad.position.y = 0.05;
+    pad.material = baseMat;
+    pad.isPickable = false;
+
+    const stem = BABYLON.MeshBuilder.CreateCylinder(`${prefix}_teleportMarker_stem`, {
+        diameterTop: 0.16,
+        diameterBottom: 0.22,
+        height: 0.95,
+        tessellation: 16,
+    }, scene);
+    stem.parent = root;
+    stem.position.y = 0.58;
+    stem.material = baseMat;
+    stem.isPickable = false;
+
+    const ring = BABYLON.MeshBuilder.CreateTorus(`${prefix}_teleportMarker_ring`, {
+        diameter: 1.15,
+        thickness: 0.08,
+        tessellation: 24,
+    }, scene);
+    ring.parent = root;
+    ring.position.y = 1.04;
+    ring.material = glowMat;
+    ring.isPickable = false;
+
+    const cap = BABYLON.MeshBuilder.CreateSphere(`${prefix}_teleportMarker_cap`, {
+        diameter: 0.28,
+        segments: 16,
+    }, scene);
+    cap.parent = root;
+    cap.position.y = 1.12;
+    cap.material = glowMat;
+    cap.isPickable = false;
+
+    return root;
+}
+
 export function createBounceSlime(main, pos) {
     const instances = main.assets["slime"].instantiateModelsToScene((name) => name);
     const slime = instances.rootNodes[0];

@@ -68,6 +68,8 @@ export class AssetsLoader {
         this.loadModel("accesCard", "accesCard.glb")
         this.loadModel("button", "button.glb")
         this.loadModel("defaultMap", "defaultMap.glb")
+        // Optional turret station model (dropped-in by designer)
+        this.loadModel("turret", "Turret.glb")
 
         //////////////////// images ////////////////////
         this.loadImage("ground", BASE + "images/hmap.jpeg")
@@ -147,6 +149,16 @@ export class AssetsLoader {
             await new Promise(resolve => {
                 this.assetsManager.onFinish = () => {
                     console.log("All assets loaded");
+                    try {
+                        const hasTurret = !!this.main.assets["turret"];
+                        console.info(`[AssetsLoader] turret present: ${hasTurret}`);
+                        if (hasTurret) {
+                            const roots = this.main.assets["turret"].rootNodes || [];
+                            console.info('[AssetsLoader] turret rootNodes:', roots.map(r => r.name));
+                        }
+                    } catch (e) {
+                        console.warn('[AssetsLoader] error inspecting turret asset', e);
+                    }
                     resolve();
                 };
                 this.assetsManager.load();
