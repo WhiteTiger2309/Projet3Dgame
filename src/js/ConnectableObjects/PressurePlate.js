@@ -37,10 +37,12 @@ export class PressurePlate extends Source {
             numberOfTriggered: 0,
             activatePressurePlate: () => {
                 pressurePlate.position = this.defaultPos.clone().addInPlace(new BABYLON.Vector3(0, -0.08, 0));
+                this.isActivated = true
                 this.activate();
             },
             deactivatePressurePlate: () => {
                 pressurePlate.position = this.defaultPos.clone()
+                this.isActivated = false
                 this.deactivate();
             }
         };

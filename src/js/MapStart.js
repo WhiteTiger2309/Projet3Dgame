@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core'
 const BASE = import.meta.env.BASE_URL || '/';
 
 import { CreateMap } from './CreateMap.js';
-import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBounceSlime, createBox, createAntiBoxGate, placeOnMesh, createGrabbableObject, createShip } from './utils/utils.js';
+import { addStaticPhysics, createMapChangeGate, placeOnGround, createMeshFromAsset, createBox, createAntiBoxGate, placeOnMesh, createGrabbableObject, createShip, createTrigger } from './utils/utils.js';
 import { MapLab } from './MapLab.js';
 
 export class MapStart extends CreateMap {
