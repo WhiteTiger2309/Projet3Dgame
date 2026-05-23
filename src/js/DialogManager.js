@@ -32,6 +32,38 @@ export class DialogManager {
                     text: "Tu peux uniquement relier des objets entourés de rouge qui sont des interrupteurs ou des plaques aux portes entourées de vert.",
                 }
             ],
+            "DialogLazer1": [
+                {
+                    text: "Bienvenue dans la première salle laser.",
+                },
+                {
+                    text: "Regarde cet objet, il envoie un faisceau laser. Essaie de le guider jusqu'au capteur.",
+                }
+            ],
+            "DialogLazer2": [
+                {
+                    text: "Ici, le miroir fixe fait le renvoi principal.",
+                },
+                {
+                    text: "Place-toi pour bien viser le rebond et atteindre le capteur au fond de la salle.",
+                }
+            ],
+            "DialogLazer3": [
+                {
+                    text: "Le prisme se comporte différemment d'un miroir.",
+                },
+                {
+                    text: "Il faut séparer le faisceau et alimenter les deux capteurs pour ouvrir la suite.",
+                }
+            ],
+            "DialogLazer4": [
+                {
+                    text: "Dernière salle laser: il faut combiner les deux mécaniques.",
+                },
+                {
+                    text: "Commence par réactiver l'émetteur laser, puis guide le faisceau avec les miroirs inclinables jusqu'au capteur.",
+                }
+            ],
         }
         this.changeDialog("Dialog1")
     }

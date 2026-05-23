@@ -1,7 +1,8 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { addStaticPhysics, createDiegeticTeleportMarker, createMapChangeGate, createMeshFromAsset, placeOnMesh } from './utils/utils.js';
-import { createEmissiveStripTexture, createPbrPanelMaterial } from './utils/materials.js';
+import { createEmissiveStripTexture } from './utils/materials.js';
+import { Robot } from './Robot.js';
 import { MapLazer } from './Map_lazer.js';
 import { MapLazer4 } from './Map_lazer4.js';
 
@@ -22,6 +23,13 @@ export class MapLazer3 extends MapLazer {
 
     createMap() {
         super.createMap();
+
+        this.robot = new Robot(
+            this.main,
+            new BABYLON.Vector3(this.roomCenterX(0) - 4.2, 1.2, 6.2),
+            0,
+            'DialogLazer3'
+        )
 
         // Gate vers MapLazer4 dans la salle de sortie.
         // On le place juste derrière la porte (côté salle 2).
@@ -84,20 +92,20 @@ export class MapLazer3 extends MapLazer {
         makePillar('r6_pillar_b', c5 - 2.8, -4.5, 1.4, 3.2, 1.4);
     }
 
-    createHintPanels(scene) {
-        const z = -(this.ROOM_DEPTH / 2) + 10.2;
-        const xOffset = -(this.ROOM_LENGTH / 2) - 1.5;
-        const pos = new BABYLON.Vector3(this.roomCenterX(1) + xOffset, 8.4, z);
-        this.createHintPanel(
-            'hint_room_6',
-            pos,
-            'SALLE 6 — Splitter/prisme: le faisceau se sépare, il faut alimenter 2 capteurs (E sur le prisme pour l\'orienter).'
-        );
-    }
-
     createLaserSystem(scene) {
         // Tous les éléments laser pour la salle splitter/prisme.
         this.ensureLaserBeamShaders();
+
+        const createLaserMaterial = (name, { baseColor, emissiveColor, emissiveTexture }) => {
+            const mat = new BABYLON.StandardMaterial(name, scene);
+            mat.diffuseColor = baseColor;
+            mat.emissiveColor = emissiveColor;
+            mat.specularColor = BABYLON.Color3.Black();
+            if (emissiveTexture) {
+                mat.emissiveTexture = emissiveTexture;
+            }
+            return mat;
+        };
 
         // Nettoyage défensif si recréation.
         this.emitters = [];
@@ -193,10 +201,8 @@ export class MapLazer3 extends MapLazer {
                 color,
                 intensity: 1.2,
             });
-            const mat = createPbrPanelMaterial(scene, id + '_mat', {
+            const mat = createLaserMaterial(id + '_mat', {
                 baseColor: new BABYLON.Color3(0.22, 0.22, 0.24),
-                metallic: 0.12,
-                roughness: 0.65,
                 emissiveColor: color.scale(2.0),
                 emissiveTexture: emissiveTex,
             });
@@ -240,10 +246,8 @@ export class MapLazer3 extends MapLazer {
                 color: colorOff,
                 intensity: 1.0,
             });
-            const mat = createPbrPanelMaterial(scene, id + '_mat', {
+            const mat = createLaserMaterial(id + '_mat', {
                 baseColor: new BABYLON.Color3(0.14, 0.16, 0.20),
-                metallic: 0.08,
-                roughness: 0.85,
                 emissiveColor: colorOff.scale(0.35),
                 emissiveTexture: emissiveTex,
             });

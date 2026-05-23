@@ -1,7 +1,8 @@
 import * as BABYLON from '@babylonjs/core'
 
 import { addStaticPhysics, createDiegeticTeleportMarker, createMapChangeGate, createMeshFromAsset, placeOnMesh } from './utils/utils.js';
-import { createEmissiveStripTexture, createPbrPanelMaterial } from './utils/materials.js';
+import { createEmissiveStripTexture } from './utils/materials.js';
+import { Robot } from './Robot.js';
 import { MapLazer } from './Map_lazer.js';
 import { MapLab } from './MapLab.js';
 import { ElectricPuzzle } from './ElectricPuzzle.js';
@@ -30,6 +31,13 @@ export class MapLazer4 extends MapLazer {
 
     createMap() {
         super.createMap();
+
+        this.robot = new Robot(
+            this.main,
+            new BABYLON.Vector3(this.roomCenterX(0) - 6.2, 1.2, 6.2),
+            0,
+            'DialogLazer4'
+        )
 
         // Gate vers MapLab dans la salle de sortie.
         const gatePos = new BABYLON.Vector3(this.roomBoundaryX(0) + 2.4, 0, 0);
@@ -138,19 +146,19 @@ export class MapLazer4 extends MapLazer {
         addStaticPhysics(blocker, 'BOX');
     }
 
-    createHintPanels(scene) {
-        const z = -(this.ROOM_DEPTH / 2) + 10.2;
-        const xOffset = -(this.ROOM_LENGTH / 2) - 1.5;
-        const pos = new BABYLON.Vector3(this.roomCenterX(1) + xOffset, 8.4, z);
-        this.createHintPanel(
-            'hint_combo_room',
-            pos,
-            'SALLE COMBO — 1) Alimente l\'émetteur avec le circuit (place la boîte conductrice pour relier les connecteurs). 2) Oriente les miroirs (E puis IJKL/flèches) pour contourner le mur et toucher le capteur.'
-        );
-    }
-
     createLaserSystem(scene) {
         this.ensureLaserBeamShaders();
+
+        const createLaserMaterial = (name, { baseColor, emissiveColor, emissiveTexture }) => {
+            const mat = new BABYLON.StandardMaterial(name, scene);
+            mat.diffuseColor = baseColor;
+            mat.emissiveColor = emissiveColor;
+            mat.specularColor = BABYLON.Color3.Black();
+            if (emissiveTexture) {
+                mat.emissiveTexture = emissiveTexture;
+            }
+            return mat;
+        };
 
         // Nettoyage défensif.
         this.emitters = [];
@@ -250,10 +258,8 @@ export class MapLazer4 extends MapLazer {
                 color,
                 intensity: 1.2,
             });
-            const mat = createPbrPanelMaterial(scene, id + '_mat', {
+            const mat = createLaserMaterial(id + '_mat', {
                 baseColor: new BABYLON.Color3(0.22, 0.22, 0.24),
-                metallic: 0.12,
-                roughness: 0.65,
                 emissiveColor: color.scale(2.0),
                 emissiveTexture: emissiveTex,
             });
@@ -295,10 +301,8 @@ export class MapLazer4 extends MapLazer {
                 color,
                 intensity: 1.2,
             });
-            const mat = createPbrPanelMaterial(scene, id + '_mat', {
+            const mat = createLaserMaterial(id + '_mat', {
                 baseColor: new BABYLON.Color3(0.10, 0.11, 0.13),
-                metallic: 0.05,
-                roughness: 0.65,
                 emissiveColor: color.scale(1.8),
                 emissiveTexture: emissiveTex,
             });
@@ -335,10 +339,8 @@ export class MapLazer4 extends MapLazer {
                 color: colorOff,
                 intensity: 1.0,
             });
-            const mat = createPbrPanelMaterial(scene, id + '_mat', {
+            const mat = createLaserMaterial(id + '_mat', {
                 baseColor: new BABYLON.Color3(0.14, 0.16, 0.20),
-                metallic: 0.08,
-                roughness: 0.85,
                 emissiveColor: colorOff.scale(0.35),
                 emissiveTexture: emissiveTex,
             });

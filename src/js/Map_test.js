@@ -197,7 +197,7 @@ export class MapTest extends CreateMap {
 
         // Test A/B: ground back to original asphalt image (no materials.js helpers).
         const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
-        const asphalt = new BABYLON.Texture(BASE + 'assets/terrain/asphalt_01.jpg', scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+        const asphalt = new BABYLON.Texture(BASE + 'assets/terrain/sol.png', scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
         asphalt.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
         asphalt.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
         asphalt.uScale = 10;
