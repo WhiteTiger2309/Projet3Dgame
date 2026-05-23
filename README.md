@@ -5,11 +5,11 @@ Marc DI RUSO
 
 Lien vers le jeu : https://whitetiger2309.github.io/Projet3Dgame/
 
-##Partie conception : choix techniques, justification, difficultés rencontrées, choses dont vous êtes les plus fiers.
+## Partie conception : choix techniques, justification, difficultés rencontrées, choses dont vous êtes les plus fiers.
 Le jeu se joue en utilisant un clavier et une souris, le pavé tactile n’est pas adapté et la manette n’est pas supportée.
 Nous sommes fiers de notre jeu, c’est pour cela que nous prévoyons de le perfectionner pour le concours. Nous avons déjà plusieurs idées d'améliorations : ajouter d’avantages des sons (pour signifier au joueur qu’il a réussi le puzzle par exemple), regrouper les puzzles entre eux (laser avec lien), ajouter une fin.
 
-#Premières idées :
+# Premières idées :
 Très rapidement, nous sommes parties sur l’idée d’un jeu composé de différents puzzles, dans l’esprit de Portal, mais sans le portal gun. L’objectif était de proposer plusieurs mécaniques complémentaires, afin de garder un rythme varié tout au long du jeu. Cette logique se retrouve dans plusieurs cartes et systèmes, notamment src/js/MapLab.js, src/js/MapLazer.js, src/js/MapPuzzle1.js, src/js/MapPuzzle2.js et src/js/ElectricPuzzle.js. 
 Première image du prototype du jeu :
 
@@ -22,7 +22,7 @@ Nous avons également décidé d’ajouter un menu, géré dans index.html et sr
 Nous avons ajouté des effets lumineux sur les murs pour donner un aspect plus futuriste au jeu :
 
 
-#Une des versions de la map non gardée :
+# Une des versions de la map non gardée :
 
 
 Nous avons essayé de créer différents puzzles amusants et variés pour le joueur:
@@ -34,24 +34,24 @@ relier des interrupteurs à des portes grâce à un système de connexion;
 résoudre un puzzle électrique où il faut faire circuler du courant entre une source et une destination.
 Le projet ne repose pas sur une seule idée, mais sur plusieurs systèmes complémentaires. Le système de connexion entre objets, visible dans src/js/ConnectionManager.js et dans les objets connectables de src/js/ConnectableObjects, est particulièrement intéressant car il permet de construire des énigmes de manière réutilisable. Le puzzle électrique, lui, ajoute une logique différente basée sur la propagation d’énergie et les états des objets.
 
-#Relier un interrupteur à une porte :
+# Relier un interrupteur à une porte :
 
 
-#Emetteur laser :
+# Emetteur laser :
 
 
-#Laser réfléchie sur un miroir :
-
-
-
+# Laser réfléchie sur un miroir :
 
 
 
-#Difficultées rencontrés :
+
+
+
+# Difficultées rencontrés :
 Nous avons eu du mal à stabiliser une idée claire pour la boucle de jeu. Plusieurs concepts ont été testés, puis abandonnés ou simplifiés, avant d’aboutir à une structure plus cohérente. 
 
 
-#Ce dont on est le plus fiers :
+# Ce dont on est le plus fiers :
 Nous sommes particulièrement fiers des déplacements du joueur et de ses collisions, qui reposent sur Havok et donnent une sensation de contrôle plus propre et plus crédible. Le moteur de physique est initialisé dans src/js/Main.js, tandis que le comportement du joueur est concentré dans src/js/Player.js.
 Nous sommes aussi fiers du chargeur central d’assets. Le projet utilise src/js/utils/AssetsLoader.js pour précharger les modèles, textures et sons, ce qui permet d’éviter les temps de chargement visibles pendant la partie et de garder une expérience plus fluide.
 La partie sonore est aussi un point fort. La musique d’ambiance est préchargée et des mécanismes de secours ont été prévus pour que le son fonctionne malgré les restrictions des navigateurs. Les bruits de pas sont gérés séparément de la musique, ce qui rend l’immersion plus naturelle.
