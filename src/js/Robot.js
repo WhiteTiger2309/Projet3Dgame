@@ -3,12 +3,14 @@ import { addStaticPhysics, placeOnMesh } from './utils/utils.js';
 
 
 export class Robot {
-    constructor(main, pos, rotation, dialogName = "Dialog1") {
+    constructor(main, pos, rotation, dialogName) {
         this.scene = main.scene
         this.main = main
         this.pos = placeOnMesh(main, pos)
         this.rotation = BABYLON.Tools.ToRadians(rotation)
-        this.dialogName = dialogName
+        if (dialogName) {
+            main.player.stateMachine.states.dialog.dialogManager.changeDialog(dialogName)
+        }
         this.root
 
         this.importRobot()
@@ -26,7 +28,6 @@ export class Robot {
                 mesh.metadata.aggregate = addStaticPhysics(mesh, "BOX")
                 mesh.metadata.aggregate.body.disablePreStep = false;
                 mesh.metadata.hasDialog = true
-                mesh.metadata.dialogName = this.dialogName
                 mesh.metadata.onEnter = () => {
                     const RobotTalking = this.scene.getAnimationGroupByName("RobotFaceTalking")
                     RobotTalking.start(true)
