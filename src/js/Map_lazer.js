@@ -260,18 +260,7 @@ export class MapLazer extends CreateMap {
             subdivisions: 2,
         }, scene);
 
-        // Asphalt ground (matte) for readability.
-        const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
-        const asphalt = new BABYLON.Texture(BASE + 'assets/terrain/sol.png', scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
-        asphalt.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
-        asphalt.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
-        asphalt.uScale = 20;
-        asphalt.vScale = 10;
-        asphalt.gammaSpace = true;
-        asphalt.anisotropicFilteringLevel = 8;
-        groundMat.diffuseTexture = asphalt;
-        groundMat.specularColor = BABYLON.Color3.Black();
-        ground.material = groundMat; 
+        ground.material = this.main.materials["ground"];
 
         ground.metadata = { ...(ground.metadata || {}), laserBlocker: true };
         addStaticPhysics(ground, 'BOX');

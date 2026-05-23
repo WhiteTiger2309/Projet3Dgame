@@ -68,12 +68,12 @@ export class AssetsLoader {
         //////////////////// materials ////////////////////
         this.loadTexture("asphalt", BASE + "assets/terrain/sol.png", (texture) => {
             const mat = new BABYLON.StandardMaterial("groundMat", this.scene);
-            mat.diffuseTexture = texture
-            mat.diffuseTexture.uScale = 0;
-            mat.diffuseTexture.vScale = 0;
-            mat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
-            mat.specularColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-            mat.diffuseTexture.updateSamplingMode(4)
+            mat.emissiveTexture = texture
+            mat.emissiveTexture.uScale = 15;
+            mat.emissiveTexture.vScale = 10;
+            mat.disableLighting = true
+
+            mat.emissiveTexture.updateSamplingMode(4)
             this.main.materials["ground"] = mat;
         })
 

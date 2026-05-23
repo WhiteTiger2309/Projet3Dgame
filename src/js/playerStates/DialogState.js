@@ -18,9 +18,6 @@ export class DialogState extends State {
         // console.log("Enter Dialog");
         dialogBox.style.display = "block"
         dialogCrosshair.style.display = "none"
-        if (functions?.[2]) {
-            this.dialogManager.changeDialog(functions[2])
-        }
         dialogBox.innerText = this.dialogManager.currentLine
         if (functions?.[0]) {
             functions[0]()
