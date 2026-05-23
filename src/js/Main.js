@@ -39,8 +39,10 @@ export class Main {
         this.assetsReady = false;
         this.isGameRunning = false;
         this.menuOverlay = null;
+        this.endOverlay = null;
         this.menuStartButton = null;
         this.menuQuitButton = null;
+        this.endQuitButton = null;
         this.menuMusic = null;
         this.menuMusicStarted = false;
         this.menuAudioContext = null;
@@ -123,16 +125,21 @@ export class Main {
 
     setupMenu() {
         this.menuOverlay = document.querySelector("#mainMenu");
+        this.endOverlay = document.querySelector("#endMenu");
         this.menuStartButton = document.querySelector("#menuStartButton");
         this.menuQuitButton = document.querySelector("#menuQuitButton");
+        this.endQuitButton = document.querySelector("#endMenuQuitButton");
 
         this.setMenuButtonsEnabled(false);
+        this.hideEndMenu();
         this.setHudVisible(false);
 
         this.menuStartButton?.addEventListener("pointerenter", () => this.playMenuUiTone(880, 0.045));
         this.menuQuitButton?.addEventListener("pointerenter", () => this.playMenuUiTone(620, 0.035));
+        this.endQuitButton?.addEventListener("pointerenter", () => this.playMenuUiTone(620, 0.035));
         this.menuStartButton?.addEventListener("click", () => this.onStartClicked());
         this.menuQuitButton?.addEventListener("click", () => this.quitGame());
+        this.endQuitButton?.addEventListener("click", () => this.quitGame());
     }
 
     setMenuButtonsEnabled(enabled) {
@@ -154,7 +161,17 @@ export class Main {
     }
 
     showMenu() {
+        this.endOverlay?.classList.add("hidden");
         this.menuOverlay?.classList.remove("hidden");
+    }
+
+    hideEndMenu() {
+        this.endOverlay?.classList.add("hidden");
+    }
+
+    showEndMenu() {
+        this.menuOverlay?.classList.add("hidden");
+        this.endOverlay?.classList.remove("hidden");
     }
 
     playMenuUiTone(frequency, duration, volume = 0.018) {
@@ -253,6 +270,7 @@ export class Main {
 
         this.playMenuUiTone(720, 0.06, 0.02);
         this.setMenuButtonsEnabled(false);
+        this.hideEndMenu();
 
         try {
             this.stopMenuMusic();
@@ -316,6 +334,28 @@ export class Main {
         this.setHudVisible(false);
         this.showMenu();
         this.setMenuButtonsEnabled(!!this.assetsReady);
+        this.stopMenuAudio();
+        this.startMenuMusic();
+    }
+
+    returnToEndMenu() {
+        this.isGameRunning = false;
+
+        if (this.mapBeforeRenderObserver) {
+            this.scene.onBeforeRenderObservable.remove(this.mapBeforeRenderObserver);
+            this.mapBeforeRenderObserver = null;
+        }
+
+        this.disposeCurrentGame();
+
+        this.scene.activeCamera = this.menuCamera || this.scene.activeCamera;
+        if (document.pointerLockElement) {
+            document.exitPointerLock?.();
+        }
+
+        this.setHudVisible(false);
+        this.hideMenu();
+        this.showEndMenu();
         this.stopMenuAudio();
         this.startMenuMusic();
     }

@@ -15,7 +15,7 @@ export class MapFin extends DefautlMapPuzzle {
 
         const returnGatePos = new BABYLON.Vector3(0, 0, 1.5);
         const returnGate = createMapChangeGate(this.main, undefined, returnGatePos, undefined, 0);
-        returnGate.metadata.onTriggerEnter = () => this.main.returnToMainMenu();
+        returnGate.metadata.onTriggerEnter = () => this.main.returnToEndMenu();
 
         createDiegeticTeleportMarker(this.scene, returnGatePos, 'fin');
     }

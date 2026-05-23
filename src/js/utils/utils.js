@@ -187,6 +187,10 @@ export function addTriggerObservable(havokPlugin, main) {
                     return;
                 }
 
+                if (!collidedData?.map) {
+                    return;
+                }
+
                 changeMap(collidedData.map, main, collidedData.spawnPos, collidedData.spawnRotation);
             });
         }

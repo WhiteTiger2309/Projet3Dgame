@@ -88,10 +88,6 @@ export class MapLazer4 extends MapLazer {
             }
         }
 
-        // Empêche la sélection d'un device laser quand OFF (évite confusion).
-        if (!solved && this.laserControl?.active?.type === 'mirror') {
-            // OK: on garde le miroir sélectionnable même OFF.
-        }
         if (!solved && this.laserControl?.active?.type === 'emitter' && this.laserControl?.active?.id === this._comboEmitterId) {
             this.laserControl.active = null;
             this.updateLaserControlVisuals();
