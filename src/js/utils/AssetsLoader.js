@@ -49,6 +49,7 @@ export class AssetsLoader {
         //////////////////// 3D models ////////////////////
         this.loadModel("robot", "robot.glb")
         this.loadModel("ship", "shipTest.glb")
+        this.loadModel("ship2", "ship.glb")
         this.loadModel("mapGate", "mapChangeGate.glb")
         this.loadModel("slime", "slime.glb")
         this.loadModel("door", "door.glb")

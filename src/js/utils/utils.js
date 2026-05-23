@@ -306,7 +306,7 @@ export function createAntiBoxGate(main, pos, rotation) {
 }
 
 export function createShip(main, pos, rotation) {
-    createMeshFromAsset(main.assets["ship"], pos, "MESH", rotation, false)
+    createMeshFromAsset(main.assets["ship2"], pos, "MESH", rotation, false)
 
     const door = main.scene.getMeshByName("Door");
     door.metadata.defaultPos = door.position.clone();
@@ -323,9 +323,29 @@ export function createShip(main, pos, rotation) {
             if (!buttonPressedAnimation.isPlaying) {
                 buttonPressedAnimation.play();
                 if (door.metadata.isOpen) {
-                    door.position = door.metadata.defaultPos.clone();
+                    BABYLON.Animation.CreateAndStartAnimation(
+                        "shipDoorClose",
+                        door,
+                        `position.y`,
+                        60,
+                        60,
+                        door.position.y,
+                        door.metadata.defaultPos.y,
+                        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
+                        undefined,
+                    );
                 } else {
-                    door.position = door.metadata.defaultPos.clone().addInPlace(new BABYLON.Vector3(0, 2.5, 0));
+                    BABYLON.Animation.CreateAndStartAnimation(
+                        "shipDoorOpen",
+                        door,
+                        `position.y`,
+                        60,
+                        60,
+                        door.position.y,
+                        door.metadata.defaultPos.y + 2.8,
+                        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
+                        undefined,
+                    );
                 }
                 door.metadata.isOpen = !door.metadata.isOpen;
             }
