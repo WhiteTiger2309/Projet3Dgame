@@ -21,6 +21,7 @@ import { MapLazer2 } from './Map_lazer2.js';
 import { MapLazer4 } from './Map_lazer4.js';
 import { MapPuzzle1 } from './MapPuzzle1.js';
 import { MapPuzzle2 } from './MapPuzzle2.js';
+import { MapFin } from './MapFin.js';
 
 export class Main {
 
@@ -44,6 +45,8 @@ export class Main {
         this.menuMusicStarted = false;
         this.menuAudioContext = null;
         this.menuAmbienceStarted = false;
+        this.menuCamera = null;
+        this.mapBeforeRenderObserver = null;
 
         window.addEventListener("resize", () => this.engine.resize())
 
@@ -89,6 +92,7 @@ export class Main {
         const camera = new BABYLON.FreeCamera("menuCamera", new BABYLON.Vector3(0, 1.5, -8), scene);
         camera.setTarget(BABYLON.Vector3.Zero());
         scene.activeCamera = camera;
+        this.menuCamera = camera;
 
         return scene;
     }
@@ -147,6 +151,10 @@ export class Main {
 
     hideMenu() {
         this.menuOverlay?.classList.add("hidden");
+    }
+
+    showMenu() {
+        this.menuOverlay?.classList.remove("hidden");
     }
 
     playMenuUiTone(frequency, duration, volume = 0.018) {
@@ -264,6 +272,8 @@ export class Main {
             return;
         }
 
+        this.disposeCurrentGame();
+
         this.isGameRunning = true;
         this.scene.simulatePointerDown(this.canvas)
 
@@ -276,9 +286,90 @@ export class Main {
         this.map = new MapStart(this);
         // this.map = new MapLab(this);
         await this.map.createMap()
-        this.scene.registerBeforeRender(() => {
-            this.map.beforeRenderUpdate();
+        if (this.mapBeforeRenderObserver) {
+            this.scene.onBeforeRenderObservable.remove(this.mapBeforeRenderObserver);
+        }
+        this.mapBeforeRenderObserver = this.scene.onBeforeRenderObservable.add(() => {
+            if (!this.isGameRunning) {
+                return;
+            }
+
+            this.map?.beforeRenderUpdate();
         })
+    }
+
+    returnToMainMenu() {
+        this.isGameRunning = false;
+
+        if (this.mapBeforeRenderObserver) {
+            this.scene.onBeforeRenderObservable.remove(this.mapBeforeRenderObserver);
+            this.mapBeforeRenderObserver = null;
+        }
+
+        this.disposeCurrentGame();
+
+        this.scene.activeCamera = this.menuCamera || this.scene.activeCamera;
+        if (document.pointerLockElement) {
+            document.exitPointerLock?.();
+        }
+
+        this.setHudVisible(false);
+        this.showMenu();
+        this.setMenuButtonsEnabled(!!this.assetsReady);
+        this.stopMenuAudio();
+        this.startMenuMusic();
+    }
+
+    disposeCurrentGame() {
+        const safeDispose = (entity) => {
+            if (entity && typeof entity.dispose === "function") {
+                try {
+                    entity.dispose();
+                } catch {
+                    // noop
+                }
+            }
+        };
+
+        if (this.player) {
+            safeDispose(this.player.connectionManager?.previewLine);
+            safeDispose(this.player.connectionManager?.highlightLayer);
+            safeDispose(this.player.connectionManager?.outliner);
+            safeDispose(this.player.highlight);
+            safeDispose(this.player.outliner);
+            safeDispose(this.player.line);
+            safeDispose(this.player.camera);
+            safeDispose(this.player.hand);
+            safeDispose(this.player.head);
+            safeDispose(this.player.player);
+            safeDispose(this.player.character);
+            this.player = null;
+        }
+
+        this.map = null;
+
+        this.scene.effectLayers.slice().forEach((layer) => {
+            safeDispose(layer);
+        });
+
+        this.scene.meshes.slice().forEach((mesh) => {
+            safeDispose(mesh);
+        });
+
+        this.scene.transformNodes.slice().forEach((node) => {
+            safeDispose(node);
+        });
+
+        this.scene.lights.slice().forEach((light) => {
+            if (light !== this.mainLight) {
+                safeDispose(light);
+            }
+        });
+
+        if (this.mainLight) {
+            this.mainLight.intensity = 0.75;
+            this.mainLight.direction = new BABYLON.Vector3(0, 1, 0);
+        }
     }
 
     createPlayer() {

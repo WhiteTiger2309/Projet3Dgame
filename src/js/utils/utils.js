@@ -38,7 +38,8 @@ export function createMapChangeGate(main, map, gatePos, playerSpawnPos, gateRota
     trigger.metadata = {
         map: map,
         spawnPos: playerSpawnPos,
-        spawnRotation: playerSpawnRotation
+        spawnRotation: playerSpawnRotation,
+        onTriggerEnter: undefined
     };
     return trigger
 }
@@ -180,7 +181,14 @@ export function addTriggerObservable(havokPlugin, main) {
         }
 
         if ((ev.collider.transformNode.name === "CCTransformNode" && ev.collidedAgainst.transformNode.name === "mapChangeTrigger") && ev.type === "TRIGGER_ENTERED") {
-            fade(function () { changeMap(collidedData.map, main, collidedData.spawnPos, collidedData.spawnRotation) });
+            fade(function () {
+                if (typeof collidedData?.onTriggerEnter === "function") {
+                    collidedData.onTriggerEnter(main, collidedData);
+                    return;
+                }
+
+                changeMap(collidedData.map, main, collidedData.spawnPos, collidedData.spawnRotation);
+            });
         }
 
         if ((ev.collider.transformNode.name === "CCTransformNode" && ev.collidedAgainst.transformNode.name === "bounceTrigger") && ev.type === "TRIGGER_ENTERED") {

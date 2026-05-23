@@ -38,6 +38,9 @@ export class DialogManager {
                 },
                 {
                     text: "Regarde cet objet, il envoie un faisceau laser. Essaie de le guider jusqu'au capteur.",
+                },
+                {
+                    text: "Intéragis avec et déplace le rayon avec les flèches directionnelles.",
                 }
             ],
             "DialogLazer2": [
@@ -62,6 +65,14 @@ export class DialogManager {
                 },
                 {
                     text: "Commence par réactiver l'émetteur laser, puis guide le faisceau avec les miroirs inclinables jusqu'au capteur.",
+                }
+            ],
+            "DialogFin": [
+                {
+                    text: "Bravo, tu as réussi à résoudre tous les puzzles et à atteindre la fin du jeu.",
+                },
+                {
+                    text: "Prend ce téléporteur pour revenir au menu principal.",
                 }
             ],
         }
