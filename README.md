@@ -13,7 +13,11 @@ Nous sommes fiers de notre jeu, c’est pour cela que nous prévoyons de le perf
 Très rapidement, nous sommes parties sur l’idée d’un jeu composé de différents puzzles, dans l’esprit de Portal, mais sans le portal gun. L’objectif était de proposer plusieurs mécaniques complémentaires, afin de garder un rythme varié tout au long du jeu. Cette logique se retrouve dans plusieurs cartes et systèmes, notamment src/js/MapLab.js, src/js/MapLazer.js, src/js/MapPuzzle1.js, src/js/MapPuzzle2.js et src/js/ElectricPuzzle.js. 
 Première image du prototype du jeu :
 
+<p align="center"><img src="public\images\readme\image7.png" width="50%"></p>  
+
 L’une des grandes questions a été de savoir comment respecter le thème IA. Une première idée a été d’ajouter un boss de fin, mais elle a rapidement été abandonnée car trop complexe pour le temps disponible. Nous avons finalement choisi une approche plus simple et plus réaliste: introduire un petit robot en 3D, utilisé comme élément narratif et interactif. Ce choix est visible dans src/js/Robot.js et dans le système de dialogue associé via src/js/DialogManager.js. Cela permet de donner une présence au thème IA sans surcharger la structure du jeu. 
+
+<p align="center"><img src="public\images\readme\image8.png" width="30%"></p>  
 
 Une autre idée abandonnée était de faire apporter des objets au robot pour qu’il améliore le joueur. Cette piste nous a aidées à explorer plusieurs directions de gameplay, mais elle a été écartée pour rester concentrée sur une boucle de jeu plus claire. 
 
@@ -21,8 +25,12 @@ Sous les conseils de monsieur Buffa, nous avons ajouté un fog sur la carte afin
 Nous avons également décidé d’ajouter un menu, géré dans index.html et src/js/Main.js, ainsi que deux musiques distinctes, une pour le menu et une pour la phase de jeu, prises en charge par src/js/utils/SoundManager.js, afin de renforcer l’immersion du joueur dès l’accueil puis pendant la partie.
 Nous avons ajouté des effets lumineux sur les murs pour donner un aspect plus futuriste au jeu :
 
+<p align="center"><img src="public\images\readme\image6.png" width="50%"></p>  
+
 
 ## Une des versions de la map non gardée :
+
+<p align="center"><img src="public\images\readme\image5.png" width="50%"></p>  
 
 
 Nous avons essayé de créer différents puzzles amusants et variés pour le joueur:
@@ -36,11 +44,16 @@ Le projet ne repose pas sur une seule idée, mais sur plusieurs systèmes compl�
 
 ## Relier un interrupteur à une porte :
 
+<p align="center"><img src="public\images\readme\image3.png" width="50%"></p>  
 
 ## Emetteur laser :
 
+<p align="center"><img src="public\images\readme\image2.png" width="50%"></p>  
+
 
 ## Laser réfléchie sur un miroir :
+
+<p align="center"><img src="public\images\readme\image1.png" width="50%"></p>  
 
 
 
@@ -57,8 +70,7 @@ Nous sommes aussi fiers du chargeur central d’assets. Le projet utilise src/js
 La partie sonore est aussi un point fort. La musique d’ambiance est préchargée et des mécanismes de secours ont été prévus pour que le son fonctionne malgré les restrictions des navigateurs. Les bruits de pas sont gérés séparément de la musique, ce qui rend l’immersion plus naturelle.
 Enfin, nous sommes fières de la caméra subjective, parentée au personnage, qui donne une vue FPS claire et lisible. Cela renforce l’immersion et s’intègre bien au système d’interaction du joueur, notamment pour les rayons de sélection et les puzzles. 
 
-
-
+<p align="center"><img src="public\images\readme\image4.png" width="50%"></p>  
 
 
 
