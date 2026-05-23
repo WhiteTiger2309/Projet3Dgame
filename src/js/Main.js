@@ -18,6 +18,9 @@ import { SoundManager } from './utils/SoundManager.js';
 import { MapLazer3 } from './Map_lazer3.js';
 import { MapLazer1 } from './Map_lazer1.js';
 import { MapLazer2 } from './Map_lazer2.js';
+import { MapLazer4 } from './Map_lazer4.js';
+import { MapPuzzle1 } from './MapPuzzle1.js';
+import { MapPuzzle2 } from './MapPuzzle2.js';
 
 export class Main {
 

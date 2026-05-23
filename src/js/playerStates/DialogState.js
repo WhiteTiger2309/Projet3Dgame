@@ -18,9 +18,14 @@ export class DialogState extends State {
         // console.log("Enter Dialog");
         dialogBox.style.display = "block"
         dialogCrosshair.style.display = "none"
+        if (functions?.[2]) {
+            this.dialogManager.changeDialog(functions[2])
+        }
         dialogBox.innerText = this.dialogManager.currentLine
-        functions[0]()
-        this.onExit = functions[1]
+        if (functions?.[0]) {
+            functions[0]()
+        }
+        this.onExit = functions?.[1]
     }
 
     update() {
@@ -39,6 +44,8 @@ export class DialogState extends State {
         // console.log("Exit Dialog");
         dialogBox.style.display = "none"
         this.dialogManager.resetDialog()
-        this.onExit()
+        if (this.onExit) {
+            this.onExit()
+        }
     }
 }

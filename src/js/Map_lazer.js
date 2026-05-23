@@ -262,16 +262,16 @@ export class MapLazer extends CreateMap {
 
         // Asphalt ground (matte) for readability.
         const groundMat = new BABYLON.StandardMaterial('groundMat', scene);
-        const asphalt = new BABYLON.Texture(BASE + 'assets/terrain/asphalt_01.jpg', scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
+        const asphalt = new BABYLON.Texture(BASE + 'assets/terrain/sol.png', scene, true, false, BABYLON.Texture.TRILINEAR_SAMPLINGMODE);
         asphalt.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
         asphalt.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
-        asphalt.uScale = Math.max(6, groundWidth / 16);
-        asphalt.vScale = Math.max(2, groundDepth / 10);
+        asphalt.uScale = 20;
+        asphalt.vScale = 10;
         asphalt.gammaSpace = true;
         asphalt.anisotropicFilteringLevel = 8;
         groundMat.diffuseTexture = asphalt;
         groundMat.specularColor = BABYLON.Color3.Black();
-        ground.material = groundMat;
+        ground.material = groundMat; 
 
         ground.metadata = { ...(ground.metadata || {}), laserBlocker: true };
         addStaticPhysics(ground, 'BOX');
@@ -496,26 +496,7 @@ export class MapLazer extends CreateMap {
         this.createJumpPad(scene, new BABYLON.Vector3(62, 0.12, 8));
     }
 
-    createHintPanels(scene) {
-        const z = -(this.ROOM_DEPTH / 2) + 1.2;
-        const xOffset = -(this.ROOM_LENGTH / 2) + 2.6;
-
-        const hints = [
-            'SALLE 1 (TUTO) — Vise le CAPTEUR pour ouvrir la porte. E: interagir, IJKL/flèches: orienter, T/Echap: quitter, R: reset.',
-            'SALLE 2 — Miroir fixe: rebondis sur le miroir pour toucher le capteur.',
-            'SALLE 3 — Miroir interactif: E sur le miroir puis IJKL/flèches pour viser le capteur (l\'émetteur est fixe).',
-            'SALLE 4 — Shutter (timing): le laser passe seulement quand le volet est ouvert.',
-            'SALLE 5 — Capteur à charge: maintiens le laser dessus pour remplir la jauge.',
-            'SALLE 6 — Splitter/prisme: le faisceau se sépare, il faut alimenter 2 capteurs (E sur le prisme pour l\'orienter).',
-            'SALLE 7 — Capteur directionnel: il faut arriver du bon angle (E sur le miroir pour l\'orienter, puis vise le capteur DIR).',
-            'SALLE 8 — Cible mobile: touche-la assez longtemps pour ouvrir la porte.',
-            'SALLE 9 — Miroir portable: il ne réfléchit que posé sur le support (snap). En main: IJKL/flèches pour l\'orienter.',
-        ];
-
-        for (let i = 0; i < hints.length; i += 1) {
-            const pos = new BABYLON.Vector3(this.roomCenterX(i) + xOffset, 3.4, z);
-            this.createHintPanel(`hint_room_${i + 1}`, pos, hints[i]);
-        }
+    createHintPanels(scene) {     
     }
 
     createSlidingDoor(name, position, sizeVec3) {

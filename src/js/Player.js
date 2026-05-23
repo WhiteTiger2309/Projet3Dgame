@@ -367,7 +367,11 @@ export class Player {
                 dialogCrosshair.style.display = "block"
                 interactCrosshair.style.display = "none"
                 if (pickInfo.pickedMesh.metadata && this.input.justPressed["interact"]) {
-                    const param = [pickInfo.pickedMesh.metadata.onEnter, pickInfo.pickedMesh.metadata.onExit]
+                    const param = [
+                        pickInfo.pickedMesh.metadata.onEnter,
+                        pickInfo.pickedMesh.metadata.onExit,
+                        pickInfo.pickedMesh.metadata.dialogName,
+                    ]
                     this.stateMachine.switchState(this.stateMachine.states.dialog, param)
                 }
             }
