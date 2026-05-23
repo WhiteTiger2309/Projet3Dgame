@@ -7,7 +7,7 @@ Lien vers le jeu : https://whitetiger2309.github.io/Projet3Dgame/
 
 # Partie conception : choix techniques, justification, difficultés rencontrées, choses dont vous êtes les plus fiers.
 Le jeu se joue en utilisant un clavier et une souris, le pavé tactile n’est pas adapté et la manette n’est pas supportée.
-Nous sommes fiers de notre jeu, c’est pour cela que nous prévoyons de le perfectionner pour le concours. Nous avons déjà plusieurs idées d'améliorations : ajouter d’avantages des sons (pour signifier au joueur qu’il a réussi le puzzle par exemple), regrouper les puzzles entre eux (laser avec lien), ajouter une fin.
+Nous sommes fiers de notre jeu, c’est pour cela que nous prévoyons de le perfectionner pour le concours. Nous avons déjà plusieurs idées d'améliorations : ajouter d’avantages des sons (pour signifier au joueur qu’il a réussi le puzzle par exemple), regrouper les puzzles entre eux (laser avec lien), ajouter une vraie fin.
 
 ## Premières idées :
 Très rapidement, nous sommes parties sur l’idée d’un jeu composé de différents puzzles, dans l’esprit de Portal, mais sans le portal gun. L’objectif était de proposer plusieurs mécaniques complémentaires, afin de garder un rythme varié tout au long du jeu. Cette logique se retrouve dans plusieurs cartes et systèmes, notamment src/js/MapLab.js, src/js/MapLazer.js, src/js/MapPuzzle1.js, src/js/MapPuzzle2.js et src/js/ElectricPuzzle.js. 
