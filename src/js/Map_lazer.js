@@ -16,7 +16,7 @@ export class MapLazer extends CreateMap {
         const DOOR_GAP_DEPTH = 8;
 
         // Portes: à maintenir, mais avec un petit délai avant fermeture.
-        const DOOR_CLOSE_DELAY_S = 1.35;
+        const DOOR_CLOSE_DELAY_S = 0.2;
 
         const CORRIDOR_LENGTH = ROOM_COUNT * ROOM_LENGTH;
         const ROOM0_CENTER_X = (-CORRIDOR_LENGTH / 2) + (ROOM_LENGTH / 2);
@@ -1947,6 +1947,8 @@ export class MapLazer extends CreateMap {
 
         if (!scene || !this.emitters?.length || !this._laserBeamPool?.length) return;
 
+        const prevSensorHits = { ...(this.puzzleState?.sensors || {}) };
+
         // Reset hits (par frame).
         if (this.puzzleState?.sensors) {
             for (const s of this.sensors || []) {
@@ -2107,6 +2109,29 @@ export class MapLazer extends CreateMap {
             }
 
             // Sinon: blocker => stop.
+        }
+
+        const sensorHitSound = this.main?.sounds?.sensorHit;
+        if (sensorHitSound && this.puzzleState?.sensors) {
+            let shouldPlay = false;
+            for (const s of this.sensors || []) {
+                if (!s?.id) continue;
+                if (this.puzzleState.sensors[s.id] && !prevSensorHits[s.id]) {
+                    shouldPlay = true;
+                    break;
+                }
+            }
+
+            if (shouldPlay) {
+                try {
+                    if (sensorHitSound.isPlaying) {
+                        sensorHitSound.stop();
+                    }
+                    sensorHitSound.play();
+                } catch {
+                    // noop
+                }
+            }
         }
 
         // Désactiver les beams non utilisés.

@@ -16,7 +16,7 @@ export class MapLazer2 extends MapLazer {
         this.ROOM0_CENTER_X = (-this.CORRIDOR_LENGTH / 2) + (this.ROOM_LENGTH / 2);
 
         // Porte: sur une mini-map, on laisse plus de temps pour traverser.
-        this.DOOR_CLOSE_DELAY_S = 4.0;
+        this.DOOR_CLOSE_DELAY_S = 0.5;
 
         // Spawn en salle puzzle
         this.player.respawnPos = new BABYLON.Vector3(this.ROOM0_CENTER_X - 6, 2, 0);

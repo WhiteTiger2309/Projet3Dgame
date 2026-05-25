@@ -4,7 +4,6 @@ import { addStaticPhysics, createDiegeticTeleportMarker, createMapChangeGate, cr
 import { createEmissiveStripTexture } from './utils/materials.js';
 import { Robot } from './Robot.js';
 import { MapLazer } from './Map_lazer.js';
-import { MapLab } from './MapLab.js';
 import { ElectricPuzzle } from './ElectricPuzzle.js';
 import { MapFin } from './MapFin.js';
 
@@ -18,7 +17,7 @@ export class MapLazer4 extends MapLazer {
         this.ROOM0_CENTER_X = (-this.CORRIDOR_LENGTH / 2) + (this.ROOM_LENGTH / 2);
 
         // Porte: sur une mini-map, on laisse plus de temps pour traverser.
-        this.DOOR_CLOSE_DELAY_S = 4.0;
+        this.DOOR_CLOSE_DELAY_S = 0.5;
 
         // Spawn en salle puzzle
         this.player.respawnPos = new BABYLON.Vector3(this.ROOM0_CENTER_X - 6, 2, 0);

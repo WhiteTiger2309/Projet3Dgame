@@ -113,6 +113,7 @@ export class AssetsLoader {
         this.loadSound("footstep2", BASE + "sounds/footstep2.wav", false, 0.15);
         this.loadSound("footstep3", BASE + "sounds/footstep3.wav", false, 0.15);
         this.loadSound("footstep4", BASE + "sounds/footstep4.wav", false, 0.15);
+        this.loadSound("sensorHit", BASE + "sounds/son_capteur.mp3", false, 0.8);
 
         ////////////////////////////////////////
         this.assetsManager.onProgress = (remaining, total) => {
