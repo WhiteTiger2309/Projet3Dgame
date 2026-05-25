@@ -1,5 +1,5 @@
 Mathis ANDRÉ  
-Marc DI RUSO
+Marc DI RUSSO
 
 # Lancer le jeu
 
