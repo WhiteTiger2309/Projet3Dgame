@@ -120,6 +120,7 @@ export function createBounceSlime(main, pos) {
 
 export function createBox(main, pos, size) {
     const box = BABYLON.MeshBuilder.CreateBox("box", { width: size, depth: size, height: size }, main.scene);
+    box.material = main.materials["base"]
     box.position = pos;
     return createGrabbableObject(main, pos, box);
 }
@@ -167,6 +168,13 @@ export function createTrigger(main, name, pos, width, depth, height, enterFunc, 
             }
         }
     })
+}
+
+export function createShape(main, pos, width, depth, height) {
+    const shape = BABYLON.MeshBuilder.CreateBox("shape", { width: width, depth: depth, height: height }, main.scene);
+    shape.material = main.materials["base"]
+    shape.position = pos.clone();
+    const aggregate = addStaticPhysics(shape, "BOX");
 }
 
 export function addTriggerObservable(havokPlugin, main) {

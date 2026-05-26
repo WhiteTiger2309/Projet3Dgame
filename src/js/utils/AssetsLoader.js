@@ -95,6 +95,12 @@ export class AssetsLoader {
         mat2.emissiveColor = new BABYLON.Color3(1, 1, 0);
         this.main.materials["electric"] = mat2;
 
+        const baseMat = new BABYLON.PBRMaterial("base", this.scene);
+        baseMat.albedoColor = new BABYLON.Color3(1, 1, 1);
+        baseMat.metallic = 0;
+        baseMat.roughness = 1;
+        this.main.materials["base"] = baseMat;
+
         this.loadTexture("space", BASE + "assets/space/space1.png", (texture) => {
             const mat = new BABYLON.StandardMaterial("spaceSkyAboveMat", this.scene);
             mat.diffuseTexture = texture

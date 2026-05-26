@@ -21,6 +21,7 @@ export class PressurePlate extends Source {
 
     createMesh(pos) {
         const pressurePlate = BABYLON.MeshBuilder.CreateBox("pressurePlate", { width: 1.5, depth: 1.5, height: 0.2 }, this.main.scene);
+        pressurePlate.material = this.main.materials["base"]
         pressurePlate.position = this.defaultPos;
         const meshAggregate = addStaticPhysics(pressurePlate, "BOX")
         meshAggregate.body.disablePreStep = false;
