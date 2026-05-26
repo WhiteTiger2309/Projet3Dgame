@@ -22,6 +22,7 @@ import { MapLazer4 } from './Map_lazer4.js';
 import { MapPuzzle1 } from './MapPuzzle1.js';
 import { MapPuzzle2 } from './MapPuzzle2.js';
 import { MapFin } from './MapFin.js';
+import { MapMix } from './MapMix.js';
 
 export class Main {
 

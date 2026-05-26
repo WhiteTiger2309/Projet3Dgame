@@ -6,6 +6,7 @@ import { Robot } from './Robot.js';
 import { MapLazer } from './Map_lazer.js';
 import { ElectricPuzzle } from './ElectricPuzzle.js';
 import { MapFin } from './MapFin.js';
+import { MapMix } from './MapMix.js';
 
 export class MapLazer4 extends MapLazer {
     constructor(main, PLAYER_SPAWN_POS, PLAYER_SPAWN_ROTATION) {
@@ -41,7 +42,7 @@ export class MapLazer4 extends MapLazer {
 
         
         const gatePos = new BABYLON.Vector3(this.roomBoundaryX(0) + 2.4, 0, 0);
-        createMapChangeGate(this.main, MapFin, gatePos, undefined, 90);
+        createMapChangeGate(this.main, MapMix, gatePos, undefined, 90);
 
         createDiegeticTeleportMarker(this.scene, gatePos, 'lazer4');
     }

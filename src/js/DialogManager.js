@@ -67,6 +67,14 @@ export class DialogManager {
                     text: "Commence par réactiver l'émetteur laser, puis guide le faisceau avec les miroirs inclinables jusqu'au capteur.",
                 }
             ],
+            "DialogMix": [
+                {
+                    text: "Essaie d'appuyer sur A pour passer en mode lien.",
+                },
+                {
+                    text: "Relie la plaque de pression à la station laser.",
+                }
+            ],
             "DialogFin": [
                 {
                     text: "Bravo, tu as réussi à résoudre tous les puzzles et à atteindre la fin du jeu.",
