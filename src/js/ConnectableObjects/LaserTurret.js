@@ -88,6 +88,7 @@ export class LaserTurret extends Destination {
             turret.rotation.y = this.yaw
 
             let proxyAssigned = false
+            let highlightTarget = null
             turret.getDescendants().forEach((m) => {
                 try {
                     m.isVisible = true
@@ -100,6 +101,7 @@ export class LaserTurret extends Destination {
                         m.metadata.connectable = this
                         m.metadata.isInteractable = true
                         m.metadata.onInteract = () => this.toggleControl()
+                        highlightTarget = m
                         proxyAssigned = true
                     }
                     else {
@@ -116,6 +118,7 @@ export class LaserTurret extends Destination {
                 turret.metadata.connectable = this
                 turret.metadata.isInteractable = true
                 turret.metadata.onInteract = () => this.toggleControl()
+                highlightTarget = turret
             }
 
             turret.isPickable = true
@@ -123,6 +126,8 @@ export class LaserTurret extends Destination {
             turret.metadata.connectable = this
             turret.metadata.isInteractable = true
             turret.metadata.onInteract = () => this.toggleControl()
+
+            this.highlightMesh = highlightTarget ?? turret
 
             try {
                 const haloMat = new BABYLON.StandardMaterial('laserTurretHaloMat', this.main.scene)

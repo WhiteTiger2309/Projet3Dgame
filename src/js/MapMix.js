@@ -22,8 +22,7 @@ export class MapMix extends DefautlMapPuzzle {
         this.exitDoor = new Door(this.main, new BABYLON.Vector3(-0.1, 0, -12.8), 0, false, "y", 3)
         this.laserTurret = new LaserTurret(this.main, new BABYLON.Vector3(-4.2, 0, 4), 0, true, {
             enabled: false,
-            maxDistance: 45,
-            color: new BABYLON.Color3(1.0, 0.2, 0.2),
+            maxDistance: 45
         })
         this.pressurePlate = new PressurePlate(this.main, new BABYLON.Vector3(2.3, 1.1, -0.8), 0, true, this.laserTurret)
         this.laserSensorId = 'mix_sensor_1'
