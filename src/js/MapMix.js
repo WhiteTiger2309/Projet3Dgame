@@ -24,7 +24,7 @@ export class MapMix extends DefautlMapPuzzle {
             enabled: false,
             maxDistance: 45
         })
-        this.pressurePlate = new PressurePlate(this.main, new BABYLON.Vector3(2.3, 1.1, -0.8), 0, true, this.laserTurret)
+        this.pressurePlate = new PressurePlate(this.main, new BABYLON.Vector3(2.3, 1.1, -0.8), 0, true)
         this.laserSensorId = 'mix_sensor_1'
         this._laserSensorWasActive = false
         this.createLaserSensor(new BABYLON.Vector3(3.8, 2.2, 4.0))
